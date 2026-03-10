@@ -1,0 +1,4 @@
+interface:
+  display_name: "AREN App Context"
+  short_description: "Product and technical context for ARĒN"
+  default_prompt: "Use $aren-app-context when working on the ARĒN SwiftUI wardrobe app."
