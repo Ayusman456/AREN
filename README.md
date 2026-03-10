@@ -52,6 +52,22 @@ This repo is set up to avoid committing common secrets and local-only config:
 
 Do not hardcode credentials in source files. Use environment-driven configuration or local untracked config files.
 
+## Supabase Setup
+
+The repo now includes a safe Supabase configuration scaffold:
+
+- [SupabaseConfiguration.swift](/Users/ayusmansahu/Documents/Developer/Xcode/AREN/AREN/AREN/Core/Services/Supabase/SupabaseConfiguration.swift)
+- [SupabaseConfig.example.plist](/Users/ayusmansahu/Documents/Developer/Xcode/AREN/AREN/AREN/Resources/Config/SupabaseConfig.example.plist)
+
+To finish local setup:
+
+1. Add the official `supabase-swift` package in Xcode from `https://github.com/supabase/supabase-swift`.
+2. Copy `SupabaseConfig.example.plist` to `SupabaseConfig.plist`.
+3. Put your real `SUPABASE_URL` and `SUPABASE_ANON_KEY` in the untracked `SupabaseConfig.plist`.
+4. Keep `SupabaseConfig.plist` out of Git. It is already ignored.
+
+The app code is set up to prefer `SupabaseConfig.plist` and fall back to environment variables when present.
+
 ## Next Steps
 
 - Add the missing starter app files such as `ContentView` and the initial SwiftData models

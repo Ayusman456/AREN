@@ -22,5 +22,6 @@ build/
 GoogleService-Info.plist
 Secrets.plist
 Config.plist
+SupabaseConfig.plist
 *.p8
 *.mobileprovision
