@@ -16,3 +16,11 @@ build/
 # App dependencies and secrets
 .env
 .env.*
+
+# Common Apple app secret/config files
+*.xcconfig
+GoogleService-Info.plist
+Secrets.plist
+Config.plist
+*.p8
+*.mobileprovision
