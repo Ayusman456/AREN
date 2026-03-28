@@ -16,7 +16,8 @@ struct ARENApp: App {
 
     var body: some Scene {
         WindowGroup {
-            Text("ARĒN")  // temporary placeholder
+            HomeView()
+                .preferredColorScheme(.light)
         }
         .modelContainer(sharedModelContainer)
     }
