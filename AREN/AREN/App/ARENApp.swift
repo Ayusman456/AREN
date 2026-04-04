@@ -16,7 +16,7 @@ struct ARENApp: App {
 
     var body: some Scene {
         WindowGroup {
-            HomeView()
+            AppShellView()
                 .preferredColorScheme(.light)
         }
         .modelContainer(sharedModelContainer)

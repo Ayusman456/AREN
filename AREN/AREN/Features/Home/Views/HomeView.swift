@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct HomeView: View {
-    @State private var activeTab: HomeTabBarItem = .home
+    @State private var isOutfitSaved = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -17,18 +17,25 @@ struct HomeView: View {
                 OutfitCardEditorialStackView()
                     .padding(.top, 0)
                     .padding(.bottom, 8)
+                    .overlay(alignment: .topTrailing) {
+                        // Keep the save affordance as an overlay so it doesn't affect the
+                        // underlying card layout or the home screen spacing.
+                        BookmarkSaveButtonView(isSaved: isOutfitSaved) {
+                            isOutfitSaved.toggle()
+                        }
+                        // Match the Figma save placement: visually attached to the outfit
+                        // card, but still treated as a parent-owned action in HomeView.
+                        .padding(.top, 16)
+                        .padding(.trailing, 20)
+                    }
 
                 DemoBannerCTAView(onTap: {})
             }
             .padding(.top, 0)
 
             Spacer(minLength: 0)
-
-            HomeTabBarView(activeItem: activeTab) { selected in
-                activeTab = selected
-            }
         }
-        .background(ArenColor.Surface.primary.ignoresSafeArea())
+        .background(ArenColor.Surface.primary)
     }
 }
 
