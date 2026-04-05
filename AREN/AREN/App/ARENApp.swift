@@ -3,6 +3,8 @@ import SwiftUI
 
 @main
 struct ARENApp: App {
+    @StateObject private var authService = AuthService()
+
     private let sharedModelContainer: ModelContainer = {
         do {
             return try ModelContainer(
@@ -16,8 +18,17 @@ struct ARENApp: App {
 
     var body: some Scene {
         WindowGroup {
-            AppShellView()
-                .preferredColorScheme(.light)
+            Group {
+                if authService.isLaunching {
+                    SplashView()
+                } else {
+                    AppShellView()
+                }
+            }
+            .task {
+                await authService.prepareSessionIfNeeded()
+            }
+            .preferredColorScheme(.light)
         }
         .modelContainer(sharedModelContainer)
     }
