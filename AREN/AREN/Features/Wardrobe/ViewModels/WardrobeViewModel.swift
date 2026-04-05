@@ -5,58 +5,39 @@ import Foundation
 final class WardrobeViewModel: ObservableObject {
     @Published var items: [WardrobeItem] = [
         WardrobeItem(
-            title: "Zara Shirt Blue",
+            title: "Linen Shirt Blue",
             category: "Tops",
-            productCode: "AREN-SH-001",
-            colorNote: "More colours",
-            imageAssetName: "Outfit/shirt_blue",
-            priceText: "₹ 2,550.00",
-            colourSwatchHex: "#A8B7BB"
+            productCode: "",
+            colorNote: "Blue",
+            imageAssetName: "tops_001"
         ),
         WardrobeItem(
-            title: "White Oxford",
+            title: "Dark Shirt",
             category: "Tops",
-            productCode: "AREN-SH-002",
-            colorNote: "White",
-            imageAssetName: "Outfit/shirt_white",
-            priceText: "₹ 2,350.00",
-            colourSwatchHex: "#F7F7F5"
+            productCode: "",
+            colorNote: "Brown",
+            imageAssetName: "tops_002"
         ),
         WardrobeItem(
-            title: "Dark Trouser",
+            title: "Linen Shorts",
             category: "Bottoms",
-            productCode: "AREN-TR-009",
-            colorNote: "More colours",
-            imageAssetName: "Outfit/trousers_dark",
-            priceText: "₹ 3,150.00",
-            colourSwatchHex: "#5B6471"
+            productCode: "",
+            colorNote: "Cream",
+            imageAssetName: "bottoms_001"
         ),
         WardrobeItem(
-            title: "Linen Trouser",
+            title: "Wide Leg Jeans",
             category: "Bottoms",
-            productCode: "AREN-TR-010",
-            colorNote: "Sand",
-            imageAssetName: "Outfit/trousers_linen",
-            priceText: "₹ 2,850.00",
-            colourSwatchHex: "#C9C1B2"
+            productCode: "",
+            colorNote: "Blue",
+            imageAssetName: "bottoms_003"
         ),
         WardrobeItem(
-            title: "Derby",
+            title: "Leather Sandals",
             category: "Shoes",
-            productCode: "AREN-SH-022",
-            colorNote: "Black",
-            imageAssetName: "Outfit/shoes_derby",
-            priceText: "₹ 4,450.00",
-            colourSwatchHex: "#2B2B2B"
-        ),
-        WardrobeItem(
-            title: "Loafer",
-            category: "Shoes",
-            productCode: "AREN-SH-023",
-            colorNote: "More colours",
-            imageAssetName: "Outfit/shoes_loafer",
-            priceText: "₹ 4,250.00",
-            colourSwatchHex: "#6A5343"
+            productCode: "",
+            colorNote: "Dark Brown",
+            imageAssetName: "shoes_001"
         ),
     ]
 

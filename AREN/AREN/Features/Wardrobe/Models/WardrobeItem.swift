@@ -16,7 +16,7 @@ struct WardrobeItem: Identifiable, Hashable {
         category: String,
         productCode: String,
         colorNote: String,
-        imageAssetName: String = "Outfit/shirt_white",
+        imageAssetName: String = "Wardrobe/tops_001",
         priceText: String? = nil,
         colourSwatchHex: String? = nil,
         showsAddButton: Bool = true
