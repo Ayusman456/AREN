@@ -17,9 +17,22 @@
 		F96D44BB2F606F5600C419C5 /* AREN.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AREN.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		F9F7A3AD2F82E5EE000B0253 /* Exceptions for "AREN" folder in "AREN" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = F96D44BA2F606F5600C419C5 /* AREN */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		F96D44BD2F606F5600C419C5 /* AREN */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				F9F7A3AD2F82E5EE000B0253 /* Exceptions for "AREN" folder in "AREN" target */,
+			);
 			path = AREN;
 			sourceTree = "<group>";
 		};
