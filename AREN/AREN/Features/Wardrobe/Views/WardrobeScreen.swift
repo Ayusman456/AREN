@@ -1,9 +1,10 @@
 import SwiftUI
 
 struct WardrobeScreen: View {
-    let onBackTap: () -> Void
+    // After — onBackTap removed (router.pop() handles it)
     let onFiltersTap: () -> Void
     let onSearchTap: () -> Void
+    let onAddTap: () -> Void
     @StateObject private var viewModel = WardrobeViewModel()
     @State private var isPresentingAddItem = false
     @State private var selectedCategory = "All"
@@ -14,25 +15,24 @@ struct WardrobeScreen: View {
     ]
 
     init(
-        onBackTap: @escaping () -> Void = {},
-        onFiltersTap: @escaping () -> Void = {},
-        onSearchTap: @escaping () -> Void = {}
-    ) {
-        self.onBackTap = onBackTap
-        self.onFiltersTap = onFiltersTap
-        self.onSearchTap = onSearchTap
-    }
+            onFiltersTap: @escaping () -> Void = {},
+            onSearchTap: @escaping () -> Void = {},
+            onAddTap: @escaping () -> Void = {}
+        ) {
+            self.onFiltersTap = onFiltersTap
+            self.onSearchTap = onSearchTap
+            self.onAddTap = onAddTap
+        }
 
     var body: some View {
         VStack(spacing: 0) {
             WardrobeTopNavView(
+                mode: .filtersSearchAdd,
                 showsBackButton: false,
-                onBackTap: onBackTap,
                 onFiltersTap: onFiltersTap,
                 onSearchTap: onSearchTap,
-                onAddTap: { isPresentingAddItem = true }
+                onAddTap: onAddTap
             )
-
             WardrobeCategoryFilterStripView(
                 selectedCategory: selectedCategory
             ) { category in
