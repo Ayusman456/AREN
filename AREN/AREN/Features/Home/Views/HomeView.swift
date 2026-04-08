@@ -29,7 +29,6 @@ struct HomeView: View {
                         .padding(.trailing, 20)
                     }
 
-                DemoBannerCTAView(onTap: {})
             }
             .padding(.top, 0)
 
