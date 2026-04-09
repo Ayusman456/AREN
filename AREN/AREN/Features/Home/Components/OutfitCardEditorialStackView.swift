@@ -18,25 +18,43 @@ extension View {
 
 struct OutfitCategory {
     let items: [String]
-    var currentIndex: Int = 0
-    var currentItem: String { items[currentIndex] }
+
+    init(items: [String]) {
+        self.items = items
+    }
 }
 
 // MARK: - View
 
 struct OutfitCardEditorialStackView: View {
-    
-    // 👈 TOGGLE THIS ONCE TO SHOW/HIDE ALL DEBUG BORDERS
+
+    // Toggle to show/hide all debug borders
     private let showDebugBorders = false
-    
+
     @State private var topsIndex: Int = 0
     @State private var bottomsIndex: Int = 0
     @State private var shoesIndex: Int = 0
-    
+
     let tops: OutfitCategory
     let bottoms: OutfitCategory
     let shoes: OutfitCategory
     let captionText: String
+
+    // MARK: - Layout Constants
+
+    private enum Layout {
+        static let canvasWidth: CGFloat = 280       // Outfit canvas — locked to Figma spec
+        static let garmentWidth: CGFloat = 257      // Garment image width — locked to Figma spec
+        static let topsHeight: CGFloat = 216        // Tops row height — locked to Figma spec
+        static let bottomsHeight: CGFloat = 246     // Bottoms row height — locked to Figma spec
+        static let shoesHeight: CGFloat = 93        // Shoes row height — locked to Figma spec
+        static let rowSpacing: CGFloat = 8
+        static let captionTopPadding: CGFloat = 16
+        static let captionHorizontalPadding: CGFloat = 16
+        static let canvasVerticalPadding: CGFloat = 8
+    }
+
+    // MARK: - Init
 
     init(
         tops: OutfitCategory = OutfitCategory(items: ["shirt_blue"]),
@@ -50,6 +68,8 @@ struct OutfitCardEditorialStackView: View {
         self.captionText = captionText
     }
 
+    // MARK: - Body
+
     var body: some View {
         VStack(spacing: 0) {
             outfitStack
@@ -59,7 +79,7 @@ struct OutfitCardEditorialStackView: View {
         .background(ArenColor.Surface.primary)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(captionText)
-        .debugBorder(if: showDebugBorders, color: .red, width: 2)
+        .debugBorder(if: showDebugBorders, color: .red)
     }
 
     // MARK: - Outfit Stack
@@ -69,168 +89,114 @@ struct OutfitCardEditorialStackView: View {
             SwipableGarmentView(
                 items: tops.items,
                 currentIndex: $topsIndex,
-                height: 216,
+                height: Layout.topsHeight,
                 showDebugBorders: showDebugBorders
             )
-            
+
             SwipableGarmentView(
                 items: bottoms.items,
                 currentIndex: $bottomsIndex,
-                height: 246,
+                height: Layout.bottomsHeight,
                 showDebugBorders: showDebugBorders
             )
-            .padding(.top, 8)
-            
+            .padding(.top, Layout.rowSpacing)
+
             SwipableGarmentView(
                 items: shoes.items,
                 currentIndex: $shoesIndex,
-                height: 93,
+                height: Layout.shoesHeight,
                 showDebugBorders: showDebugBorders
             )
-            .padding(.top, 8)
+            .padding(.top, Layout.rowSpacing)
         }
-        .frame(width: 280, alignment: .center)
-        .padding(.vertical, 8)
-        .debugBorder(if: showDebugBorders, color: .blue, width: 2)
+        .frame(width: Layout.canvasWidth, alignment: .center)
+        .padding(.vertical, Layout.canvasVerticalPadding)
+        .debugBorder(if: showDebugBorders, color: .blue)
     }
 
-    // MARK: - Caption Zone
+    // MARK: - Caption
 
     private var captionZone: some View {
         Text(captionText)
-            .font(Self.captionFont)
+            .font(captionFont)
             .foregroundStyle(ArenColor.Text.secondary)
             .multilineTextAlignment(.center)
             .lineLimit(2)
-            .padding(.top, 12)
-            .padding(.horizontal, 16)
-            .debugBorder(if: showDebugBorders, color: .yellow, width: 2)
+            .padding(.top, Layout.captionTopPadding)
+            .padding(.horizontal, Layout.captionHorizontalPadding)
+            .debugBorder(if: showDebugBorders, color: .yellow)
     }
 
-    // MARK: - Swipable Garment Component
-    
-    struct Constants {
-      static let textTextTertiary: Color = Color(red: 0.53, green: 0.53, blue: 0.53)
-    }
+    // MARK: - Caption Font
+    // TODO: Replace with ArenTypography token once design system is finalised
 
-    private struct SwipableGarmentView: View {
-        let items: [String]
-        @Binding var currentIndex: Int
-        let height: CGFloat
-        let showDebugBorders: Bool
-
-        @State private var dragOffset: CGFloat = 0
-        @State private var isAnimating = false
-
-        // 🔧 Tweak these to adjust swipe feel
-        private let containerWidth: CGFloat = 257
-        private let peekWidth: CGFloat = 50          // How much of next item shows
-        private let snapThreshold: CGFloat = 80      // Distance needed to trigger snap
-        private let rubberBandLimit: CGFloat = 40    // Max stretch at edges
-        private let velocityThreshold: CGFloat = 500 // Fast flick threshold
-
-        var body: some View {
-            ZStack(alignment: .topLeading) {
-                // Current Item
-                garmentImage(items[currentIndex])
-                    .frame(width: containerWidth, height: height)
-                    .offset(x: dragOffset)
-
-                // Next Item (Peeking)
-                if currentIndex < items.count - 1 {
-                    garmentImage(items[currentIndex + 1])
-                        .frame(width: containerWidth, height: height)
-                        .offset(x: containerWidth - peekWidth + dragOffset)
-                        .opacity(dragOffset < -20 ? 1 : 0) // Simple fade in
-                }
-
-                // Counter (Simple fade animation)
-                Text("\(currentIndex + 1) / \(items.count)")
-                    .font(Font.custom("Helvetica Now Text", size: 9).weight(.light))
-                    .foregroundStyle(Constants.textTextTertiary)
-                    .padding(.top, 8)
-                    .padding(.leading, 8)
-                    .animation(.easeInOut(duration: 0.2), value: currentIndex)
-            }
-            .frame(width: containerWidth, height: height)
-            .gesture(dragGesture)
-            .debugBorder(if: showDebugBorders, color: .green, width: 2)
-        }
-
-        private var dragGesture: some Gesture {
-            DragGesture()
-                .onChanged { value in
-                    if isAnimating { return }
-                    dragOffset = calculateBoundedOffset(value.translation.width)
-                }
-                .onEnded { value in
-                    if isAnimating { return }
-                    isAnimating = true
-                    
-                    let velocity = value.predictedEndTranslation.width
-                    var shouldSnap = false
-                    
-                    if dragOffset < -snapThreshold || velocity < -velocityThreshold {
-                        if currentIndex < items.count - 1 {
-                            currentIndex += 1
-                            shouldSnap = true
-                        }
-                    } else if dragOffset > snapThreshold || velocity > velocityThreshold {
-                        if currentIndex > 0 {
-                            currentIndex -= 1
-                            shouldSnap = true
-                        }
-                    }
-                    
-                    if shouldSnap {
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    }
-                    
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
-                        dragOffset = 0
-                        isAnimating = false
-                    }
-                }
-        }
-
-        private func calculateBoundedOffset(_ translation: CGFloat) -> CGFloat {
-            if translation > 0 {
-                // Swiping right (previous item)
-                if currentIndex == 0 {
-                    return min(translation, rubberBandLimit) // Rubber band at start
-                }
-                return min(translation, containerWidth * 0.3)
-            } else {
-                // Swiping left (next item)
-                if currentIndex == items.count - 1 {
-                    return max(translation, -rubberBandLimit) // Rubber band at end
-                }
-                return max(translation, -containerWidth * 0.3)
-            }
-        }
-
-        private func garmentImage(_ assetName: String) -> some View {
-            Image(assetName.hasPrefix("Outfit/") ? assetName : "Outfit/\(assetName)")
-                .interpolation(.high)
-                .antialiased(true)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-        }
-    }
-
-    // MARK: - Helpers
-
-    private static let captionFont: Font = {
-        let candidates = [
-            "HelveticaNowText-Light",
-            "HelveticaNowText Light",
-            "HelveticaNowText-Regular",
-        ]
+    private var captionFont: Font {
+        let candidates = ["HelveticaNowText-Light", "HelveticaNowText-Regular"]
         for name in candidates where UIFont(name: name, size: 11) != nil {
             return .custom(name, size: 11)
         }
         return .system(size: 11, weight: .light)
-    }()
+    }
+}
+
+// MARK: - SwipableGarmentView
+
+private struct SwipableGarmentView: View {
+
+    let items: [String]
+    @Binding var currentIndex: Int
+    let height: CGFloat
+    let showDebugBorders: Bool
+
+    private let width: CGFloat = 257    // Garment width — locked to Figma spec
+    @State private var lastIndex: Int = 0
+
+    var body: some View {
+        guard !items.isEmpty else { return AnyView(EmptyView()) }
+
+        return AnyView(
+            ZStack(alignment: .topLeading) {
+                TabView(selection: $currentIndex) {
+                    ForEach(items.indices, id: \.self) { index in
+                        garmentImage(items[index])
+                            .frame(width: width, height: height)
+                            .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+                .frame(width: width, height: height)
+                .clipped()
+                .onChange(of: currentIndex) { _, newValue in
+                    guard newValue != lastIndex else { return }
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    lastIndex = newValue
+                }
+
+                if items.count > 1 {
+                    counterLabel
+                }
+            }
+            .debugBorder(if: showDebugBorders, color: .green)
+        )
+    }
+
+    private var counterLabel: some View {
+        Text("\(currentIndex + 1) / \(items.count)")
+            .font(.custom("Helvetica Now Text", size: 9).weight(.light))
+            .foregroundStyle(ArenColor.Text.tertiary)
+            .padding(.top, 8)
+            .padding(.leading, 8)
+            .animation(.easeInOut(duration: 0.2), value: currentIndex)
+    }
+
+    private func garmentImage(_ assetName: String) -> some View {
+        let prefixed = assetName.hasPrefix("Outfit/") ? assetName : "Outfit/\(assetName)"
+        return Image(prefixed)
+            .interpolation(.high)
+            .antialiased(true)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+    }
 }
 
 // MARK: - Preview
@@ -238,7 +204,7 @@ struct OutfitCardEditorialStackView: View {
 #Preview {
     OutfitCardEditorialStackView(
         tops: OutfitCategory(items: ["shirt_blue", "shirt_white", "polo_navy"]),
-        bottoms: OutfitCategory(items: ["trousers_dark", "chinos_stone"], currentIndex: 0),
+        bottoms: OutfitCategory(items: ["trousers_dark", "chinos_stone"]),
         shoes: OutfitCategory(items: ["shoes_loafer", "shoes_derby"]),
         captionText: "Linen for the heat, loafers for the lunch"
     )
