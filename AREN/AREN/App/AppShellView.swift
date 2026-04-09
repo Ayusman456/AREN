@@ -58,21 +58,7 @@ struct AppShellView: View {
     }
 }
 
-struct PlaceholderSectionView: View {
-    let title: String
 
-    var body: some View {
-        VStack {
-            Spacer(minLength: 0)
-            Text(title)
-                .font(.system(size: 24, weight: .light))
-                .foregroundStyle(ArenColor.Text.primary)
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(ArenColor.Surface.primary)
-    }
-}
 
 #Preview {
     AppShellView()
