@@ -4,6 +4,18 @@ struct NavigationContainer: View {
     @EnvironmentObject var router: AppRouter
     let activeTab: HomeTabBarItem
 
+    private var authSheetBinding: Binding<AppSheet?> {
+        Binding(
+            get: {
+                guard case .authSheet = router.activeSheet else { return nil }
+                return router.activeSheet
+            },
+            set: { newValue in
+                router.activeSheet = newValue
+            }
+        )
+    }
+
     var body: some View {
         NavigationStack(path: $router.path) {
             rootView(for: activeTab)
@@ -20,12 +32,12 @@ struct NavigationContainer: View {
                     }
                 }
         }
-        .sheet(item: $router.activeSheet) { sheet in
+        .sheet(item: authSheetBinding) { sheet in
             switch sheet {
-            case .wardrobeFilters:
-                EmptyView()
             case .authSheet(let context):
                 AuthSheetView(context: context)
+            case .wardrobeFilters, .dayDetail:
+                EmptyView()
             }
         }
     }
@@ -35,6 +47,7 @@ struct NavigationContainer: View {
         switch tab {
         case .home:
             HomeView()
+                .environmentObject(router)
         case .wardrobe:
             WardrobeScreen(
                 onFiltersTap: { router.present(sheet: .wardrobeFilters) },

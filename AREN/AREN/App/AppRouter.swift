@@ -15,6 +15,7 @@ enum AppDestination: Hashable {
 
 enum AppSheet: Identifiable, Hashable {
     case wardrobeFilters
+    case dayDetail(date: Date, events: [DayDetailModalView.ScheduleEvent])
     case authSheet(context: AuthContext)
 
     var id: Self { self }

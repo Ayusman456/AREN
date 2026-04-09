@@ -4,6 +4,10 @@ struct AppShellView: View {
     @StateObject private var router = AppRouter()
     @State private var activeTab: HomeTabBarItem = .home
     @State private var isPresentingWardrobeFilters = false
+    @State private var isPresentingDayDetail = false
+    @State private var dayDetailDate: Date = .now
+    @State private var dayDetailEvents: [DayDetailModalView.ScheduleEvent] = []
+    @State private var isAddingEventFromDayDetail = false
     @State private var wardrobeSelectedFilterValues: [String: String] = [
         "01-sort by": "Recently added",
         "02-status": "All",
@@ -47,11 +51,41 @@ struct AppShellView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(1)
             }
+
+            if isPresentingDayDetail {
+                Color.black.opacity(0.18)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .onTapGesture {
+                        isPresentingDayDetail = false
+                        router.activeSheet = nil
+                    }
+
+                DayDetailModalView(
+                    date: dayDetailDate,
+                    events: dayDetailEvents,
+                    isAddingEvent: $isAddingEventFromDayDetail
+                )
+                .frame(maxWidth: .infinity, alignment: .bottom)
+                .background(ArenColor.Surface.primary)
+                .ignoresSafeArea(edges: .bottom)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(2)
+            }
         }
         .animation(.easeOut(duration: 0.2), value: isPresentingWardrobeFilters)
+        .animation(.easeOut(duration: 0.2), value: isPresentingDayDetail)
         .onReceive(router.$activeSheet) { sheet in
             if sheet == .wardrobeFilters {
                 isPresentingWardrobeFilters = true
+                isPresentingDayDetail = false
+                router.activeSheet = nil
+            } else if case .dayDetail(let date, let events) = sheet {
+                dayDetailDate = date
+                dayDetailEvents = events
+                isPresentingDayDetail = true
+                isPresentingWardrobeFilters = false
+                isAddingEventFromDayDetail = false
                 router.activeSheet = nil
             }
         }
