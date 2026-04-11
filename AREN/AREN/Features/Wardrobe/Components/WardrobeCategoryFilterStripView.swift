@@ -100,7 +100,7 @@ struct WardrobeCategoryFilterStripView: View {
         CategoryItem(title: "Casual", itemWidth: 57),
         CategoryItem(title: "Work", itemWidth: 45),
         CategoryItem(title: "Date", itemWidth: 40),
-        CategoryItem(title: "Events", itemWidth: 60, contentWidth: 40, trailingInset: 20),
+        CategoryItem(title: "Events", itemWidth: 80, contentWidth: 60, trailingInset: 20),
     ]
 
     // MARK: - Fonts

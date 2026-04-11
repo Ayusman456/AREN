@@ -105,7 +105,7 @@ struct WardrobeScreen: View {
                     imageAssetName: outfit.imageAssetName,
                     titleText: outfit.title,
                     priceText: nil,
-                    coloursText: outfit.subtitle,
+                    coloursText: nil,
                     colourSwatchHex: nil,
                     showsAddButton: false,
                     onAddTap: nil
