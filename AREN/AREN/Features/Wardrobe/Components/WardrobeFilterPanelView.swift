@@ -2,6 +2,14 @@ import SwiftUI
 import UIKit
 
 struct WardrobeFilterPanelView: View {
+
+    // MARK: - Debug Toggle
+    // true  → borders on for this component only
+    // false → follows ArenDebug.isDebug
+    private static let debug = true
+
+    // MARK: - Layout
+
     private enum Layout {
         static let panelWidth: CGFloat = 402
         static let contentWidth: CGFloat = 362
@@ -15,6 +23,8 @@ struct WardrobeFilterPanelView: View {
         static let footerHeight: CGFloat = 72
         static let panelHeight: CGFloat = 440
     }
+
+    // MARK: - Section Model
 
     struct Section: Identifiable, Hashable {
         let id: String
@@ -30,10 +40,14 @@ struct WardrobeFilterPanelView: View {
         }
     }
 
+    // MARK: - Properties
+
     let sections: [Section]
     let selectedValues: [String: String]
     let onSelectOption: (String, String) -> Void
     let onViewResults: () -> Void
+
+    // MARK: - Init
 
     init(
         sections: [Section] = Self.defaultSections,
@@ -47,10 +61,11 @@ struct WardrobeFilterPanelView: View {
         self.onViewResults = onViewResults
     }
 
+    // MARK: - Body
+
     var body: some View {
         VStack(spacing: 0) {
             sectionsViewport
-
             footerCTA
         }
         .frame(width: Layout.contentWidth, height: Layout.sectionsHeight + Layout.footerHeight, alignment: .top)
@@ -58,8 +73,10 @@ struct WardrobeFilterPanelView: View {
         .padding(.vertical, Layout.verticalInset)
         .frame(width: Layout.panelWidth, height: Layout.panelHeight, alignment: .center)
         .background(ArenColor.Surface.primary)
-        // .border(.blue, width: 1)
+        .debugBorder(.blue, enabled: Self.debug)
     }
+
+    // MARK: - Sections Viewport
 
     private var sectionsViewport: some View {
         VStack(alignment: .leading, spacing: Layout.rowGap) {
@@ -68,9 +85,10 @@ struct WardrobeFilterPanelView: View {
             }
         }
         .frame(width: Layout.contentWidth, height: Layout.sectionsHeight, alignment: .topLeading)
-        // .border(.red, width: 1)
-        // .border(.green, width: 1)
+        .debugBorder(.red, enabled: Self.debug)
     }
+
+    // MARK: - Section Row
 
     private func sectionRow(_ section: Section) -> some View {
         HStack(alignment: .top, spacing: Layout.columnGap) {
@@ -82,11 +100,13 @@ struct WardrobeFilterPanelView: View {
                 }
             }
             .frame(width: Layout.optionColumnWidth, alignment: .topLeading)
-            // .border(.orange, width: 1)
+            .debugBorder(.orange, enabled: Self.debug)
         }
         .frame(width: Layout.contentWidth, alignment: .topLeading)
-        // .border(.pink, width: 1)
+        .debugBorder(.pink, enabled: Self.debug)
     }
+
+    // MARK: - Section Label
 
     private func sectionLabel(_ section: Section) -> some View {
         HStack(alignment: .top, spacing: 8) {
@@ -114,8 +134,10 @@ struct WardrobeFilterPanelView: View {
         .padding(.vertical, 8)
         .padding(.trailing, 20)
         .frame(width: Layout.labelWidth, alignment: .topLeading)
-        // .border(.purple, width: 1)
+        .debugBorder(.purple, enabled: Self.debug)
     }
+
+    // MARK: - Option Row
 
     private func optionRow(_ option: String, in section: Section) -> some View {
         let isSelected = selectedValues[section.id]?.caseInsensitiveCompare(option) == .orderedSame
@@ -133,6 +155,8 @@ struct WardrobeFilterPanelView: View {
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 
+    // MARK: - Footer CTA
+
     private var footerCTA: some View {
         VStack(alignment: .leading, spacing: 0) {
             Button(action: onViewResults) {
@@ -147,19 +171,25 @@ struct WardrobeFilterPanelView: View {
             .frame(width: Layout.contentWidth, height: 32)
             .overlay(
                 Rectangle()
-                    .stroke(ArenColor.Icon.primary, lineWidth: 1)
+                    .stroke(ArenColor.Border.dark, lineWidth: 0.5)
             )
         }
-        .padding(.vertical, 20)
+        .padding(.horizontal, 0)
+        .padding(.top, 20)
+        .padding(.bottom, 0)
         .frame(width: Layout.contentWidth, height: Layout.footerHeight, alignment: .center)
-        // .border(.black, width: 1)
+        .debugBorder(.yellow, enabled: Self.debug)
     }
+
+    // MARK: - Defaults
 
     private static let defaultSections: [Section] = [
         Section(number: "01", title: "Sort By", options: ["Recently added", "A–Z", "Brand"]),
-        Section(number: "02", title: "Status", options: ["All", "Worn", "Unworn"]),
+        Section(number: "02", title: "Status",  options: ["All", "Worn", "Unworn"]),
         Section(number: "03", title: "Occasion", options: ["All", "Work", "Evening"]),
     ]
+
+    // MARK: - Fonts
 
     private static var sectionLabelFont: Font {
         let candidates = [
@@ -167,11 +197,9 @@ struct WardrobeFilterPanelView: View {
             "HelveticaNowText Light",
             "HelveticaNowText-Regular",
         ]
-
         for name in candidates where UIFont(name: name, size: 11) != nil {
             return .custom(name, size: 11)
         }
-
         return .system(size: 11, weight: .light)
     }
 
@@ -181,14 +209,14 @@ struct WardrobeFilterPanelView: View {
             "HelveticaNowText Light",
             "HelveticaNowText-Regular",
         ]
-
         for name in candidates where UIFont(name: name, size: 13) != nil {
             return .custom(name, size: 13)
         }
-
         return .system(size: 13, weight: .light)
     }
 }
+
+// MARK: - Preview
 
 #Preview {
     WardrobeFilterPanelView(

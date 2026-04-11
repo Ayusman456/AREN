@@ -171,6 +171,7 @@ enum ArenColor {
         static let accentOrange = ArenPalette.Orange.o11
         static let accentRed = ArenPalette.Red.r11
         static let accentBlue = ArenPalette.Blue.b12
+        static let dark = ArenPalette.Neutral.n01
     }
 
     enum Icon {

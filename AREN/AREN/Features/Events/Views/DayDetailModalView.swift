@@ -2,6 +2,14 @@ import SwiftUI
 import UIKit
 
 struct DayDetailModalView: View {
+
+    // MARK: - Debug Toggle
+    // true  → borders on for this component only
+    // false → follows ArenDebug.isDebug
+    private static let debug = true
+
+    // MARK: - Layout
+
     private enum Layout {
         static let sheetWidth: CGFloat = 402
         static let filledSheetHeight: CGFloat = 348
@@ -28,6 +36,8 @@ struct DayDetailModalView: View {
         static let emptyMessageWidth: CGFloat = 240
     }
 
+    // MARK: - Schedule Event Model
+
     struct ScheduleEvent: Identifiable, Hashable {
         let id: UUID
         let title: String
@@ -47,11 +57,15 @@ struct DayDetailModalView: View {
         }
     }
 
+    // MARK: - Properties
+
     let date: Date
     let events: [ScheduleEvent]
     @Binding var isAddingEvent: Bool
     let onSelectEvent: (ScheduleEvent) -> Void
     let onTapOccasion: (ScheduleEvent) -> Void
+
+    // MARK: - Init
 
     init(
         date: Date,
@@ -67,6 +81,8 @@ struct DayDetailModalView: View {
         self.onTapOccasion = onTapOccasion
     }
 
+    // MARK: - Body
+
     var body: some View {
         VStack(spacing: Layout.stackGap) {
             content
@@ -75,7 +91,10 @@ struct DayDetailModalView: View {
         .padding(.vertical, Layout.outerVerticalPadding)
         .frame(width: Layout.sheetWidth, height: sheetHeight, alignment: .top)
         .background(ArenColor.Surface.primary)
+        .debugBorder(.blue, enabled: Self.debug)
     }
+
+    // MARK: - Content
 
     private var content: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -83,6 +102,7 @@ struct DayDetailModalView: View {
         }
         .padding(.horizontal, Layout.horizontalInset)
         .frame(width: Layout.sheetWidth, alignment: .topLeading)
+        .debugBorder(.red, enabled: Self.debug)
     }
 
     private var bodyContent: some View {
@@ -96,7 +116,10 @@ struct DayDetailModalView: View {
             }
         }
         .frame(width: Layout.contentWidth, alignment: .topLeading)
+        .debugBorder(.green, enabled: Self.debug)
     }
+
+    // MARK: - Date Header
 
     private var dateHeader: some View {
         VStack(alignment: .leading, spacing: Layout.dayHeaderGap) {
@@ -115,7 +138,10 @@ struct DayDetailModalView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .debugBorder(.purple, enabled: Self.debug)
     }
+
+    // MARK: - Event List
 
     private var eventList: some View {
         VStack(alignment: .leading, spacing: Layout.eventListGap) {
@@ -124,6 +150,7 @@ struct DayDetailModalView: View {
             }
         }
         .frame(width: Layout.contentWidth, alignment: .topLeading)
+        .debugBorder(.orange, enabled: Self.debug)
     }
 
     private func eventRow(_ event: ScheduleEvent) -> some View {
@@ -167,7 +194,10 @@ struct DayDetailModalView: View {
             .fixedSize(horizontal: true, vertical: false)
         }
         .frame(width: Layout.contentWidth, height: Layout.eventRowHeight, alignment: .leading)
+        .debugBorder(.pink, enabled: Self.debug)
     }
+
+    // MARK: - Empty State
 
     private var emptyState: some View {
         VStack(spacing: Layout.emptyStateGap) {
@@ -188,7 +218,10 @@ struct DayDetailModalView: View {
         .padding(.horizontal, Layout.emptyStateHorizontalPadding)
         .padding(.vertical, Layout.emptyStateVerticalPadding)
         .frame(width: Layout.contentWidth, alignment: .center)
+        .debugBorder(.cyan, enabled: Self.debug)
     }
+
+    // MARK: - Footer
 
     private var footer: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -211,7 +244,10 @@ struct DayDetailModalView: View {
         .padding(.top, Layout.footerTopPadding)
         .padding(.horizontal, Layout.horizontalInset)
         .frame(width: Layout.sheetWidth, alignment: .topLeading)
+        .debugBorder(.yellow, enabled: Self.debug)
     }
+
+    // MARK: - Computed
 
     private var sheetHeight: CGFloat {
         events.isEmpty ? Layout.emptySheetHeight : Layout.filledSheetHeight
@@ -224,6 +260,8 @@ struct DayDetailModalView: View {
     private var dateNumberText: String {
         Self.dateNumberFormatter.string(from: date)
     }
+
+    // MARK: - Formatters
 
     private static let dayFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -239,27 +277,29 @@ struct DayDetailModalView: View {
         return formatter
     }()
 
+    // MARK: - Fonts
+
     private static func helveticaNow(size: CGFloat) -> Font {
         let candidates = [
             "HelveticaNowText-Light",
             "HelveticaNowText Light",
             "HelveticaNowText-Regular",
         ]
-
         for name in candidates where UIFont(name: name, size: size) != nil {
             return .custom(name, size: size)
         }
-
         return .system(size: size, weight: .light)
     }
 
-    private static let dayLabelFont: Font = helveticaNow(size: 11)
-    private static let eventTextFont: Font = helveticaNow(size: 11)
-    private static let emptyTitleFont: Font = helveticaNow(size: 12)
-    private static let emptyBodyFont: Font = helveticaNow(size: 12)
+    private static let dayLabelFont: Font    = helveticaNow(size: 11)
+    private static let eventTextFont: Font   = helveticaNow(size: 11)
+    private static let emptyTitleFont: Font  = helveticaNow(size: 12)
+    private static let emptyBodyFont: Font   = helveticaNow(size: 12)
     private static let buttonLabelFont: Font = helveticaNow(size: 13)
-    private static let dateNumberFont: Font = helveticaNow(size: 40)
+    private static let dateNumberFont: Font  = helveticaNow(size: 40)
 }
+
+// MARK: - figmaLineHeight
 
 private extension View {
     func figmaLineHeight(_ lineHeight: CGFloat) -> some View {
@@ -267,11 +307,13 @@ private extension View {
     }
 }
 
+// MARK: - Previews
+
 #Preview("Filled") {
     DayDetailModalPreviewContainer(
         events: [
-            .init(title: "Client Lunch", timeText: "1:00 PM", occasion: "Business Casual"),
-            .init(title: "Team Standup", timeText: "3:00 PM", occasion: "Business"),
+            .init(title: "Client Lunch",     timeText: "1:00 PM", occasion: "Business Casual"),
+            .init(title: "Team Standup",     timeText: "3:00 PM", occasion: "Business"),
             .init(title: "Dinner with Sara", timeText: "7:30 PM", occasion: "Evening"),
         ]
     )

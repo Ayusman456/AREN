@@ -7,13 +7,15 @@ struct WardrobeCategoryFilterStripView: View {
     let onSelect: (String) -> Void
 
     init(
-        categories: [CategoryItem] = Self.defaultCategories,
-        selectedCategory: String = "Bottoms",
+        selectedCategory: String = "All",
+        tab: WardrobeTab = .items,
         onSelect: @escaping (String) -> Void = { _ in }
     ) {
-        self.categories = categories
         self.selectedCategory = selectedCategory
         self.onSelect = onSelect
+        self.categories = tab == .items
+            ? Self.itemCategories
+            : Self.outfitCategories
     }
 
     var body: some View {
@@ -42,7 +44,6 @@ struct WardrobeCategoryFilterStripView: View {
         return Button(action: { onSelect(category.title) }) {
             Text(category.title.uppercased())
                 .font(isSelected ? Self.activeFont : Self.inactiveFont)
-                .kerning(isSelected ? 0.0 : 0)
                 .foregroundStyle(ArenColor.Text.primary)
                 .lineLimit(1)
                 .frame(width: category.contentWidth, height: 16, alignment: .leading)
@@ -53,10 +54,11 @@ struct WardrobeCategoryFilterStripView: View {
         }
         .buttonStyle(.plain)
         .frame(width: category.itemWidth, height: 24, alignment: .leading)
-        .frame(height: 24, alignment: .center)
         .accessibilityLabel(category.title)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
+
+    // MARK: - Category Item
 
     struct CategoryItem: Identifiable, Hashable {
         let id: String
@@ -82,53 +84,50 @@ struct WardrobeCategoryFilterStripView: View {
         }
     }
 
-    private static let defaultCategories: [CategoryItem] = [
-        // These widths and edge insets come directly from the Figma item frames
-        // so the first "ALL" label and the last trailing item stay locked to
-        // the same grid measurements as the design.
-        CategoryItem(title: "all", itemWidth: 49, contentWidth: 29, leadingInset: 20),
+    // MARK: - Category Sets
+
+    private static let itemCategories: [CategoryItem] = [
+        CategoryItem(title: "All", itemWidth: 49, contentWidth: 29, leadingInset: 20),
         CategoryItem(title: "Tops", itemWidth: 36),
         CategoryItem(title: "Bottoms", itemWidth: 70),
         CategoryItem(title: "Shoes", itemWidth: 47),
         CategoryItem(title: "Accessories", itemWidth: 95),
-        CategoryItem(title: "Outerwear", itemWidth: 86),
-        CategoryItem(title: "flare", itemWidth: 43),
-        CategoryItem(title: "balloon", itemWidth: 64),
-        CategoryItem(title: "wide leg", itemWidth: 65),
-        CategoryItem(title: "skinny fit", itemWidth: 73),
-        CategoryItem(title: "raw denim", itemWidth: 97, contentWidth: 77, trailingInset: 20),
+        CategoryItem(title: "Outerwear", itemWidth: 86, contentWidth: 66, trailingInset: 20),
     ]
 
-    private static var inactiveFont: Font {
-        let candidates = [
-            "HelveticaNowText-Light",
-            "HelveticaNowText Light",
-            "HelveticaNowText-Regular",
-        ]
+    private static let outfitCategories: [CategoryItem] = [
+        CategoryItem(title: "All", itemWidth: 49, contentWidth: 29, leadingInset: 20),
+        CategoryItem(title: "Casual", itemWidth: 57),
+        CategoryItem(title: "Work", itemWidth: 45),
+        CategoryItem(title: "Date", itemWidth: 40),
+        CategoryItem(title: "Events", itemWidth: 60, contentWidth: 40, trailingInset: 20),
+    ]
 
+    // MARK: - Fonts
+
+    private static var inactiveFont: Font {
+        let candidates = ["HelveticaNowText-Light", "HelveticaNowText-Regular"]
         for name in candidates where UIFont(name: name, size: 13) != nil {
             return .custom(name, size: 13)
         }
-
         return .system(size: 13, weight: .light)
     }
 
     private static var activeFont: Font {
-        let candidates = [
-            "HelveticaNowText-Medium",
-            "HelveticaNowText Medium",
-            "HelveticaNowText-Regular",
-        ]
-
+        let candidates = ["HelveticaNowText-Medium", "HelveticaNowText-Regular"]
         for name in candidates where UIFont(name: name, size: 13) != nil {
             return .custom(name, size: 13)
         }
-
         return .system(size: 13, weight: .medium)
     }
 }
 
-#Preview {
-    WardrobeCategoryFilterStripView()
+#Preview("Items") {
+    WardrobeCategoryFilterStripView(selectedCategory: "Tops", tab: .items)
+        .background(ArenColor.Surface.primary)
+}
+
+#Preview("Outfits") {
+    WardrobeCategoryFilterStripView(selectedCategory: "Work", tab: .outfits)
         .background(ArenColor.Surface.primary)
 }

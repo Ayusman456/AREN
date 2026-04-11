@@ -2,6 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>HelveticaNowText-ExtraLight.ttf</string>
+		<string>HelveticaNowText-Light.ttf</string>
+		<string>HelveticaNowText-Medium.ttf</string>
+		<string>HelveticaNowText-Regular.ttf</string>
+		<string>HelveticaNowText-Thin.ttf</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<false/>
 	<key>UILaunchScreen</key>

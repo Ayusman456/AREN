@@ -40,7 +40,8 @@ final class WardrobeViewModel: ObservableObject {
             imageAssetName: "shoes_001"
         ),
     ]
-
+    @Published var outfits: [WardrobeOutfit] = []
+    
     func addItem(title: String, category: String, productCode: String, colorNote: String) {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedCategory = category.trimmingCharacters(in: .whitespacesAndNewlines)
