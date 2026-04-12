@@ -14,7 +14,7 @@ enum WardrobeTab {
 
 struct WardrobeTabToggleView: View {
     
-    private let showDebugBorders = true  // ← add this
+    private let showDebugBorders = false  // ← add this
 
     @Binding var selectedTab: WardrobeTab
     let itemCount: Int
