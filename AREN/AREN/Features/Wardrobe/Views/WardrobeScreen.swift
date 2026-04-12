@@ -69,11 +69,7 @@ struct WardrobeScreen: View {
             }
         }
         .background(ArenColor.Surface.primary)
-        .sheet(isPresented: $isPresentingAddItem) {
-            AddItemView { title, category, productCode, colorNote in
-                viewModel.addItem(title: title, category: category, productCode: productCode, colorNote: colorNote)
-            }
-        }
+        
     }
 
     // MARK: - Items Grid (original layout restored)

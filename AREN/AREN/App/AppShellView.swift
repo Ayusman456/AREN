@@ -8,6 +8,7 @@ struct AppShellView: View {
     @State private var dayDetailDate: Date = .now
     @State private var dayDetailEvents: [DayDetailModalView.ScheduleEvent] = []
     @State private var isAddingEventFromDayDetail = false
+    @State private var showAddItemSource = false
     @State private var wardrobeSelectedFilterValues: [String: String] = [
         "01-sort by": "Recently added",
         "02-status": "All",
@@ -16,8 +17,10 @@ struct AppShellView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
+
+            // MARK: - Main content + tab bar
             VStack(spacing: 0) {
-                NavigationContainer(activeTab: activeTab)
+                NavigationContainer(activeTab: activeTab, showAddItemSource: $showAddItemSource)
                     .environmentObject(router)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -32,6 +35,7 @@ struct AppShellView: View {
             }
             .background(ArenColor.Surface.primary.ignoresSafeArea())
 
+            // MARK: - Wardrobe filter panel
             if isPresentingWardrobeFilters {
                 Color.black.opacity(0.18)
                     .ignoresSafeArea()
@@ -52,6 +56,32 @@ struct AppShellView: View {
                 .zIndex(1)
             }
 
+            // MARK: - Add item source sheet
+            if showAddItemSource {
+                Color.black.opacity(0.18)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .onTapGesture { showAddItemSource = false }
+
+                AddItemSourceSheetView(isPresented: $showAddItemSource) { image in
+                    VisionBGRemover.process(image: image) { result in
+                        switch result {
+                        case .success(let cleanImage):
+                            // Next: upload cleanImage to Supabase
+                            print("BG removed — size: \(cleanImage.size)")
+                        case .failure(let error):
+                            print("BG removal failed: \(error)")
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .background(ArenColor.Surface.primary)
+                .ignoresSafeArea(edges: .bottom)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .zIndex(4)
+            }
+
+            // MARK: - Day detail modal
             if isPresentingDayDetail {
                 Color.black.opacity(0.18)
                     .ignoresSafeArea()
@@ -75,6 +105,7 @@ struct AppShellView: View {
         }
         .animation(.easeOut(duration: 0.2), value: isPresentingWardrobeFilters)
         .animation(.easeOut(duration: 0.2), value: isPresentingDayDetail)
+        .animation(.easeOut(duration: 0.2), value: showAddItemSource)
         .onReceive(router.$activeSheet) { sheet in
             if sheet == .wardrobeFilters {
                 isPresentingWardrobeFilters = true
@@ -91,8 +122,6 @@ struct AppShellView: View {
         }
     }
 }
-
-
 
 #Preview {
     AppShellView()

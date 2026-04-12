@@ -3,6 +3,7 @@ import SwiftUI
 struct NavigationContainer: View {
     @EnvironmentObject var router: AppRouter
     let activeTab: HomeTabBarItem
+    @Binding var showAddItemSource: Bool
 
     private var authSheetBinding: Binding<AppSheet?> {
         Binding(
@@ -34,6 +35,8 @@ struct NavigationContainer: View {
         }
         .sheet(item: authSheetBinding) { sheet in
             switch sheet {
+            case .addItemSource, .addItemCategory:
+                EmptyView()
             case .authSheet(let context):
                 AuthSheetView(context: context)
             case .wardrobeFilters, .dayDetail:
@@ -52,7 +55,7 @@ struct NavigationContainer: View {
             WardrobeScreen(
                 onFiltersTap: { router.present(sheet: .wardrobeFilters) },
                 onSearchTap: { router.navigate(to: .wardrobeSearch) },
-                onAddTap: {}
+                onAddTap: { showAddItemSource = true }
             )
         case .events:
             PlaceholderSectionView(title: "Events")

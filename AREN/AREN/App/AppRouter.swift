@@ -1,25 +1,46 @@
-//
-//  AppRouter.swift.swift
-//  AREN
-//
-//  Created by Ayusman sahu on 05/04/26.
-//
-
 import SwiftUI
 import Combine
+
+// MARK: - Destinations
 
 enum AppDestination: Hashable {
     case wardrobeSearch
     case addItem
 }
 
-enum AppSheet: Identifiable, Hashable {
+// MARK: - Sheets
+
+enum AppSheet {
     case wardrobeFilters
     case dayDetail(date: Date, events: [DayDetailModalView.ScheduleEvent])
     case authSheet(context: AuthContext)
-
-    var id: Self { self }
+    case addItemSource
+    case addItemCategory(id: UUID, image: UIImage)
 }
+
+extension AppSheet: Identifiable {
+    var id: String {
+        switch self {
+        case .wardrobeFilters:                    return "wardrobeFilters"
+        case .dayDetail:                          return "dayDetail"
+        case .authSheet:                          return "authSheet"
+        case .addItemSource:                      return "addItemSource"
+        case .addItemCategory(let uuid, _):       return "addItemCategory-\(uuid)"
+        }
+    }
+}
+
+extension AppSheet: Hashable {
+    static func == (lhs: AppSheet, rhs: AppSheet) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+// MARK: - Router
 
 @MainActor
 final class AppRouter: ObservableObject {
