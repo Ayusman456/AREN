@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 struct WardrobeScreen: View {
     let onFiltersTap: () -> Void
@@ -6,20 +7,12 @@ struct WardrobeScreen: View {
     let onAddTap: () -> Void
 
     @StateObject private var viewModel = WardrobeViewModel()
-    @State private var isPresentingAddItem = false
     @State private var selectedCategory = "All"
     @State private var selectedTab: WardrobeTab = .items
 
-    // MARK: - Grid Columns
-
-    private let itemColumns = [
+    private let columns = [
         GridItem(.fixed(171), spacing: 20),
-        GridItem(.fixed(171), spacing: 20),
-    ]
-
-    private let outfitColumns = [
-        GridItem(.fixed(171), spacing: 20),
-        GridItem(.fixed(171), spacing: 20),
+        GridItem(.fixed(171), spacing: 20)
     ]
 
     init(
@@ -31,8 +24,6 @@ struct WardrobeScreen: View {
         self.onSearchTap = onSearchTap
         self.onAddTap = onAddTap
     }
-
-    // MARK: - Body
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,7 +38,7 @@ struct WardrobeScreen: View {
             WardrobeTabToggleView(
                 selectedTab: $selectedTab,
                 itemCount: viewModel.items.count,
-                outfitCount: placeholderOutfits.count
+                outfitCount: viewModel.outfits.count
             )
             .onChange(of: selectedTab) {
                 selectedCategory = "All"
@@ -69,61 +60,31 @@ struct WardrobeScreen: View {
             }
         }
         .background(ArenColor.Surface.primary)
-        
+        .task {
+            await viewModel.fetchItems()
+        }
     }
 
-    // MARK: - Items Grid (original layout restored)
+    // MARK: - Items Grid
 
     private var itemsGrid: some View {
-        LazyVGrid(columns: itemColumns, alignment: .leading, spacing: 32) {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 32) {
             ForEach(filteredItems) { item in
-                WardrobeProductCardView(
-                    imageAssetName: item.imageAssetName,
-                    titleText: item.title,
-                    priceText: nil,
-                    coloursText: nil,
-                    colourSwatchHex: item.colourSwatchHex,
-                    showsAddButton: item.showsAddButton,
-                    onAddTap: { isPresentingAddItem = true }
-                )
+                WardrobeItemCell(item: item)
             }
         }
         .padding(.horizontal, 20)
     }
 
-    // MARK: - Outfits Grid (placeholder using existing card)
+    // MARK: - Outfits Grid
 
     private var outfitsGrid: some View {
-        LazyVGrid(columns: outfitColumns, alignment: .leading, spacing: 32) {
-            ForEach(placeholderOutfits.indices, id: \.self) { index in
-                let outfit = placeholderOutfits[index]
-                WardrobeProductCardView(
-                    imageAssetName: outfit.imageAssetName,
-                    titleText: outfit.title,
-                    priceText: nil,
-                    coloursText: nil,
-                    colourSwatchHex: nil,
-                    showsAddButton: false,
-                    onAddTap: nil
-                )
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 32) {
+            ForEach(viewModel.outfits) { outfit in
+                // wire WardrobeOutfitCell here once model is updated
             }
         }
         .padding(.horizontal, 20)
-    }
-
-    // MARK: - Placeholder Outfit Data
-
-    private var placeholderOutfits: [(title: String, subtitle: String, imageAssetName: String)] {
-        [
-            (title: "WORK", subtitle: "3 PIECES", imageAssetName: "tops_002"),
-            (title: "WORK", subtitle: "4 PIECES", imageAssetName: "tops_001"),
-            (title: "CASUAL", subtitle: "3 PIECES", imageAssetName: "tops_001"),
-            (title: "CASUAL", subtitle: "4 PIECES", imageAssetName: "tops_002"),
-            (title: "DATE", subtitle: "3 PIECES", imageAssetName: "tops_001"),
-            (title: "WORK", subtitle: "2 PIECES", imageAssetName: "tops_002"),
-            (title: "EVENTS", subtitle: "4 PIECES", imageAssetName: "tops_001"),
-            (title: "CASUAL", subtitle: "3 PIECES", imageAssetName: "tops_002"),
-        ]
     }
 
     // MARK: - Filtered Items
@@ -133,7 +94,7 @@ struct WardrobeScreen: View {
             return viewModel.items
         }
         return viewModel.items.filter {
-            $0.category.caseInsensitiveCompare(selectedCategory) == .orderedSame
+            ($0.category ?? "").caseInsensitiveCompare(selectedCategory) == .orderedSame
         }
     }
 }

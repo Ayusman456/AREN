@@ -1,13 +1,17 @@
 import Foundation
-//  WardrobeOutfit.swift
-//  AREN
-//
-//  Created by Ayusman sahu on 12/04/26.
-//
 
-struct WardrobeOutfit: Identifiable {
-    let id: UUID = UUID()
-    let imageAssetName: String
-    let occasionLabel: String
+struct WardrobeOutfit: Identifiable, Decodable {
+    let id: UUID
+    let name: String
+    let occasion: String?
+    let imageURL: String?
     let pieceCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case occasion
+        case imageURL = "image_url"
+        case pieceCount = "piece_count"
+    }
 }

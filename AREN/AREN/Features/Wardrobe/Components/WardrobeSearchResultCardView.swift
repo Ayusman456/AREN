@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Kingfisher
 
 struct WardrobeSearchResultCardView: View {
     private enum Layout {
@@ -53,12 +54,24 @@ struct WardrobeSearchResultCardView: View {
     }
 
     private var imageCarousel: some View {
-        Image(imageAssetName)
-            .resizable()
-            .interpolation(.high)
-            .scaledToFit()
-            .frame(width: Layout.width, height: Layout.imageHeight)
-            .clipped()
+        Group {
+            if imageAssetName.hasPrefix("http"),
+               let url = URL(string: imageAssetName) {
+                KFImage(url)
+                    .placeholder {
+                        Color(hex: "#F5F5F3")
+                    }
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                Image(imageAssetName)
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFit()
+            }
+        }
+        .frame(width: Layout.width, height: Layout.imageHeight)
+        .clipped()
     }
 
     private var detailsBlock: some View {

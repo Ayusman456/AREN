@@ -46,7 +46,12 @@ struct WardrobeSearchScreen: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(ArenColor.Surface.primary)
+        .task {
+            await viewModel.fetchItems()
+        }
     }
+
+    // MARK: - Computed
 
     private var sectionHeaderText: String {
         trimmedQuery.isEmpty ? "RECENTLY ADDED" : "YOUR ITEMS"
@@ -62,18 +67,11 @@ struct WardrobeSearchScreen: View {
 
     private var filteredItems: [WardrobeItem] {
         guard !trimmedQuery.isEmpty else { return viewModel.items }
-
         let normalizedQuery = trimmedQuery.uppercased()
-
         return viewModel.items.filter { item in
-            [
-                item.title,
-                item.category,
-                item.productCode,
-                item.colorNote,
-            ]
-            .map { $0.uppercased() }
-            .contains { $0.contains(normalizedQuery) }
+            [item.name, item.category ?? ""]
+                .map { $0.uppercased() }
+                .contains { $0.contains(normalizedQuery) }
         }
     }
 
@@ -82,7 +80,7 @@ struct WardrobeSearchScreen: View {
     }
 
     private func makeResultItem(from item: WardrobeItem) -> WardrobeRecentlyAddedResultsSectionView.ResultItem {
-        .init(id: item.id, imageAssetName: item.imageAssetName, titleText: item.title)
+        .init(id: item.id, imageAssetName: item.imageURL ?? "", titleText: item.name)
     }
 }
 

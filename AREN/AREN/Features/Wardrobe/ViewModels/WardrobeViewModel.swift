@@ -1,65 +1,33 @@
-import Combine
 import Foundation
+import Supabase
+import Combine
 
 @MainActor
 final class WardrobeViewModel: ObservableObject {
-    @Published var items: [WardrobeItem] = [
-        WardrobeItem(
-            title: "Linen Shirt Blue",
-            category: "Tops",
-            productCode: "",
-            colorNote: "Blue",
-            imageAssetName: "tops_001"
-        ),
-        WardrobeItem(
-            title: "Dark Shirt",
-            category: "Tops",
-            productCode: "",
-            colorNote: "Brown",
-            imageAssetName: "tops_002"
-        ),
-        WardrobeItem(
-            title: "Linen Shorts",
-            category: "Bottoms",
-            productCode: "",
-            colorNote: "Cream",
-            imageAssetName: "bottoms_001"
-        ),
-        WardrobeItem(
-            title: "Wide Leg Jeans",
-            category: "Bottoms",
-            productCode: "",
-            colorNote: "Blue",
-            imageAssetName: "bottoms_003"
-        ),
-        WardrobeItem(
-            title: "Leather Sandals",
-            category: "Shoes",
-            productCode: "",
-            colorNote: "Dark Brown",
-            imageAssetName: "shoes_001"
-        ),
-    ]
+    @Published var items: [WardrobeItem] = []
     @Published var outfits: [WardrobeOutfit] = []
-    
-    func addItem(title: String, category: String, productCode: String, colorNote: String) {
-        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedCategory = category.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedCode = productCode.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedColor = colorNote.trimmingCharacters(in: .whitespacesAndNewlines)
+    @Published var isLoading: Bool = false
+    @Published var error: String? = nil
 
-        guard !trimmedTitle.isEmpty, !trimmedCategory.isEmpty, !trimmedCode.isEmpty else {
-            return
+    private let client = SupabaseService.shared.client
+
+    func fetchItems() async {
+        isLoading = true
+        error = nil
+
+        do {
+            let response: [WardrobeItem] = try await client
+                .from("clothing_items")
+                .select()
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+
+            items = response
+        } catch {
+            self.error = error.localizedDescription
         }
 
-        items.insert(
-            WardrobeItem(
-                title: trimmedTitle,
-                category: trimmedCategory,
-                productCode: trimmedCode,
-                colorNote: trimmedColor.isEmpty ? "Unspecified" : trimmedColor
-            ),
-            at: 0
-        )
+        isLoading = false
     }
 }

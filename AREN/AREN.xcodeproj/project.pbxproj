@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		F926FBA72F8CF5B400F90EA1 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = F926FBA62F8CF5B400F90EA1 /* Kingfisher */; };
 		F9D3C0012F6096BA009ED1C2 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = F9D3C0002F6096BA009ED1C2 /* Auth */; };
 		F9D3C0032F6096BA009ED1C2 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = F9D3C0022F6096BA009ED1C2 /* Realtime */; };
 		F9D3C0052F6096BA009ED1C2 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = F9D3C0042F6096BA009ED1C2 /* Storage */; };
@@ -47,6 +48,7 @@
 				F9D3C0052F6096BA009ED1C2 /* Storage in Frameworks */,
 				F9D3C0012F6096BA009ED1C2 /* Auth in Frameworks */,
 				F9D3C0032F6096BA009ED1C2 /* Realtime in Frameworks */,
+				F926FBA72F8CF5B400F90EA1 /* Kingfisher in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -93,6 +95,7 @@
 				F9D3C0022F6096BA009ED1C2 /* Realtime */,
 				F9D3C0042F6096BA009ED1C2 /* Storage */,
 				F9D3C0062F6096BA009ED1C2 /* Supabase */,
+				F926FBA62F8CF5B400F90EA1 /* Kingfisher */,
 			);
 			productName = AREN;
 			productReference = F96D44BB2F606F5600C419C5 /* AREN.app */;
@@ -124,6 +127,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				F9D3BFFF2F6096BA009ED1C2 /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				F926FBA52F8CF5B400F90EA1 /* XCRemoteSwiftPackageReference "Kingfisher" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F96D44BC2F606F5600C419C5 /* Products */;
@@ -365,6 +369,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		F926FBA52F8CF5B400F90EA1 /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.8.1;
+			};
+		};
 		F9D3BFFF2F6096BA009ED1C2 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift";
@@ -376,6 +388,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		F926FBA62F8CF5B400F90EA1 /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F926FBA52F8CF5B400F90EA1 /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
+		};
 		F9D3C0002F6096BA009ED1C2 /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F9D3BFFF2F6096BA009ED1C2 /* XCRemoteSwiftPackageReference "supabase-swift" */;
