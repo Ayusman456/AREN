@@ -65,7 +65,7 @@ struct WardrobeProductCardView: View {
             .interpolation(.high)
             .scaledToFit()
             .frame(height: 257)
-            .border(Color.blue)  // testing purpose
+         //   .border(Color.blue)  // testing purpose
             .clipped()
     }
 

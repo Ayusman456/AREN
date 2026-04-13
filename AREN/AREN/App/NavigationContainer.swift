@@ -4,6 +4,7 @@ struct NavigationContainer: View {
     @EnvironmentObject var router: AppRouter
     let activeTab: HomeTabBarItem
     @Binding var showAddItemSource: Bool
+    @ObservedObject var wardrobeViewModel: WardrobeViewModel
 
     private var authSheetBinding: Binding<AppSheet?> {
         Binding(
@@ -53,6 +54,7 @@ struct NavigationContainer: View {
                 .environmentObject(router)
         case .wardrobe:
             WardrobeScreen(
+                viewModel: wardrobeViewModel,
                 onFiltersTap: { router.present(sheet: .wardrobeFilters) },
                 onSearchTap: { router.navigate(to: .wardrobeSearch) },
                 onAddTap: { showAddItemSource = true }

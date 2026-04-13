@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AppShellView: View {
     @StateObject private var router = AppRouter()
+    @StateObject private var wardrobeViewModel = WardrobeViewModel()
     @State private var activeTab: HomeTabBarItem = .home
     @State private var isPresentingWardrobeFilters = false
     @State private var isPresentingDayDetail = false
@@ -9,6 +10,7 @@ struct AppShellView: View {
     @State private var dayDetailEvents: [DayDetailModalView.ScheduleEvent] = []
     @State private var isAddingEventFromDayDetail = false
     @State private var showAddItemSource = false
+    @State private var isUploading = false
     @State private var wardrobeSelectedFilterValues: [String: String] = [
         "01-sort by": "Recently added",
         "02-status": "All",
@@ -20,9 +22,13 @@ struct AppShellView: View {
 
             // MARK: - Main content + tab bar
             VStack(spacing: 0) {
-                NavigationContainer(activeTab: activeTab, showAddItemSource: $showAddItemSource)
-                    .environmentObject(router)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                NavigationContainer(
+                    activeTab: activeTab,
+                    showAddItemSource: $showAddItemSource,
+                    wardrobeViewModel: wardrobeViewModel
+                )
+                .environmentObject(router)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                 HomeTabBarView(activeItem: activeTab) { item in
                     if item == activeTab {
@@ -72,6 +78,7 @@ struct AppShellView: View {
                                     print("No active session")
                                     return
                                 }
+                                await MainActor.run { isUploading = true }
                                 do {
                                     let itemID = UUID()
                                     let url = try await SupabaseService.shared.uploadClothingImage(cleanImage, itemID: itemID)
@@ -82,9 +89,11 @@ struct AppShellView: View {
                                         category: category
                                     )
                                     print("Saved clothing item: \(id)")
+                                    await wardrobeViewModel.fetchItems()
                                 } catch {
                                     print("Upload failed: \(error)")
                                 }
+                                await MainActor.run { isUploading = false }
                             }
                         case .failure(let error):
                             print("BG removal failed: \(error)")
@@ -119,10 +128,30 @@ struct AppShellView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(2)
             }
+
+            // MARK: - Upload loading overlay
+            if isUploading {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+                    .zIndex(10)
+
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(1.2)
+                    Text("ADDING ITEM")
+                        .font(.system(size: 10, weight: .regular))
+                        .tracking(2)
+                        .foregroundColor(.white)
+                }
+                .zIndex(11)
+            }
         }
         .animation(.easeOut(duration: 0.2), value: isPresentingWardrobeFilters)
         .animation(.easeOut(duration: 0.2), value: isPresentingDayDetail)
         .animation(.easeOut(duration: 0.2), value: showAddItemSource)
+        .animation(.easeOut(duration: 0.2), value: isUploading)
         .onReceive(router.$activeSheet) { sheet in
             if sheet == .wardrobeFilters {
                 isPresentingWardrobeFilters = true

@@ -71,7 +71,7 @@ struct WardrobeSearchResultCardView: View {
             }
         }
         .frame(width: Layout.width, height: Layout.imageHeight)
-        .border(Color.red)  // testing purpose
+     //   .border(Color.red)  // testing purpose
         .clipped()
     }
 

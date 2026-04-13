@@ -6,7 +6,7 @@ struct WardrobeScreen: View {
     let onSearchTap: () -> Void
     let onAddTap: () -> Void
 
-    @StateObject private var viewModel = WardrobeViewModel()
+    @ObservedObject var viewModel: WardrobeViewModel
     @State private var selectedCategory = "All"
     @State private var selectedTab: WardrobeTab = .items
 
@@ -16,10 +16,12 @@ struct WardrobeScreen: View {
     ]
 
     init(
+        viewModel: WardrobeViewModel,
         onFiltersTap: @escaping () -> Void = {},
         onSearchTap: @escaping () -> Void = {},
         onAddTap: @escaping () -> Void = {}
     ) {
+        self.viewModel = viewModel
         self.onFiltersTap = onFiltersTap
         self.onSearchTap = onSearchTap
         self.onAddTap = onAddTap
@@ -100,5 +102,5 @@ struct WardrobeScreen: View {
 }
 
 #Preview {
-    WardrobeScreen()
+    WardrobeScreen(viewModel: WardrobeViewModel())
 }
