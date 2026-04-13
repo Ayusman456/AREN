@@ -75,9 +75,11 @@ struct AppShellView: View {
                                 do {
                                     let itemID = UUID()
                                     let url = try await SupabaseService.shared.uploadClothingImage(cleanImage, itemID: itemID)
+                                    let category = await ClothingClassifier.classify(cleanImage)
                                     let id = try await SupabaseService.shared.insertClothingItem(
                                         userID: userID,
-                                        processedImageURL: url
+                                        processedImageURL: url,
+                                        category: category
                                     )
                                     print("Saved clothing item: \(id)")
                                 } catch {

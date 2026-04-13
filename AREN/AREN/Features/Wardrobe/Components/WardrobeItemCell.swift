@@ -1,6 +1,5 @@
-//import SwiftUI
-import Kingfisher
 import SwiftUI
+import Kingfisher
 
 struct WardrobeItemCell: View {
     let item: WardrobeItem
@@ -10,6 +9,8 @@ struct WardrobeItemCell: View {
             imageBlock
             metaBlock
         }
+        .frame(width: 171)
+       // .border(Color.red, width: 1) // DEBUG
     }
 
     // MARK: - Image
@@ -23,10 +24,10 @@ struct WardrobeItemCell: View {
                 .placeholder { loadingPlaceholder }
                 .resizable()
                 .scaledToFit()
-                .frame(width: 171, height: 228)
                 .padding(24)
-                .clipped()
-                .background(Color(hex: "#ffffff"))
+                .frame(width: 171, height: 228)
+                .background(Color(hex: "#F5F5F5"))
+         //       .border(Color.blue, width: 1) // DEBUG
         } else {
             emptyImagePlaceholder
         }
@@ -46,20 +47,17 @@ struct WardrobeItemCell: View {
                     .foregroundColor(Color(hex: "#999999"))
             }
         }
-        .aspectRatio(3/4, contentMode: .fit)
-        .frame(maxWidth: .infinity)
+        .frame(width: 171, height: 228)
     }
 
     private var loadingPlaceholder: some View {
         Color(hex: "#F5F5F3")
-            .aspectRatio(3/4, contentMode: .fit)
-            .frame(maxWidth: .infinity)
+            .frame(width: 171, height: 228)
     }
 
     private var emptyImagePlaceholder: some View {
         Color(hex: "#EBEBEB")
-            .aspectRatio(3/4, contentMode: .fit)
-            .frame(maxWidth: .infinity)
+            .frame(width: 171, height: 228)
     }
 
     // MARK: - Meta
@@ -81,9 +79,3 @@ struct WardrobeItemCell: View {
         .padding(.bottom, 12)
     }
 }
-//  WardrobeItemCell.swift
-//  AREN
-//
-//  Created by Ayusman sahu on 13/04/26.
-//
-

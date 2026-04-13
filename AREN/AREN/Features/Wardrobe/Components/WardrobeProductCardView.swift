@@ -51,7 +51,7 @@ struct WardrobeProductCardView: View {
             detailsArea
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        // .border(Color.pink)  // testing purpose
+         .border(Color.pink)  // debug purpose
         .background(ArenColor.Surface.primary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilitySummary)
@@ -65,6 +65,7 @@ struct WardrobeProductCardView: View {
             .interpolation(.high)
             .scaledToFit()
             .frame(height: 257)
+            .border(Color.blue)  // testing purpose
             .clipped()
     }
 
