@@ -67,8 +67,23 @@ struct AppShellView: View {
                     VisionBGRemover.process(image: image) { result in
                         switch result {
                         case .success(let cleanImage):
-                            // Next: upload cleanImage to Supabase
-                            print("BG removed — size: \(cleanImage.size)")
+                            Task {
+                                guard let userID = await SupabaseService.shared.currentUserID() else {
+                                    print("No active session")
+                                    return
+                                }
+                                do {
+                                    let itemID = UUID()
+                                    let url = try await SupabaseService.shared.uploadClothingImage(cleanImage, itemID: itemID)
+                                    let id = try await SupabaseService.shared.insertClothingItem(
+                                        userID: userID,
+                                        processedImageURL: url
+                                    )
+                                    print("Saved clothing item: \(id)")
+                                } catch {
+                                    print("Upload failed: \(error)")
+                                }
+                            }
                         case .failure(let error):
                             print("BG removal failed: \(error)")
                         }
