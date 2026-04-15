@@ -4,6 +4,7 @@ struct NavigationContainer: View {
     @EnvironmentObject var router: AppRouter
     let activeTab: HomeTabBarItem
     @Binding var showAddItemSource: Bool
+    @ObservedObject var homeViewModel: HomeViewModel
     @ObservedObject var wardrobeViewModel: WardrobeViewModel
 
     private var authSheetBinding: Binding<AppSheet?> {
@@ -50,7 +51,7 @@ struct NavigationContainer: View {
     private func rootView(for tab: HomeTabBarItem) -> some View {
         switch tab {
         case .home:
-            HomeView()
+            HomeView(homeViewModel: homeViewModel)
                 .environmentObject(router)
         case .wardrobe:
             WardrobeScreen(

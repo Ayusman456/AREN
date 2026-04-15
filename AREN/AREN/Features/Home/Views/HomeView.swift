@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @EnvironmentObject private var router: AppRouter
+    @ObservedObject var homeViewModel: HomeViewModel
 
     // MARK: - State
 
@@ -31,7 +32,21 @@ struct HomeView: View {
                 }
             )
 
-            OutfitCardEditorialStackView()
+            if homeViewModel.isLoading {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                OutfitCardEditorialStackView(
+                    tops: OutfitCategory(items: homeViewModel.dailyOutfit.top
+                        .flatMap { URL(string: $0.imageURL ?? "") }
+                        .map { [.remote($0)] } ?? [.asset("shirt_blue")]),
+                    bottoms: OutfitCategory(items: homeViewModel.dailyOutfit.bottom
+                        .flatMap { URL(string: $0.imageURL ?? "") }
+                        .map { [.remote($0)] } ?? [.asset("trousers_dark")]),
+                    shoes: OutfitCategory(items: homeViewModel.dailyOutfit.shoes
+                        .flatMap { URL(string: $0.imageURL ?? "") }
+                        .map { [.remote($0)] } ?? [.asset("shoes_loafer")])
+                )
                 .padding(.bottom, 8)
                 .overlay(alignment: .topTrailing) {
                     BookmarkSaveButtonView(isSaved: isOutfitSaved) {
@@ -40,13 +55,16 @@ struct HomeView: View {
                     .padding(.top, 16)
                     .padding(.trailing, 20)
                 }
-
+            }
             Spacer(minLength: 0)
         }
         .background(ArenColor.Surface.primary)
+        .task {
+            await homeViewModel.fetchDailyOutfit()
+        }
     }
 }
 
 #Preview {
-    HomeView()
+    HomeView(homeViewModel: HomeViewModel())
 }

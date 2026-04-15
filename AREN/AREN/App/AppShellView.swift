@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AppShellView: View {
     @StateObject private var router = AppRouter()
+    @StateObject private var homeViewModel = HomeViewModel()
     @StateObject private var wardrobeViewModel = WardrobeViewModel()
     @State private var activeTab: HomeTabBarItem = .home
     @State private var isPresentingWardrobeFilters = false
@@ -25,6 +26,7 @@ struct AppShellView: View {
                 NavigationContainer(
                     activeTab: activeTab,
                     showAddItemSource: $showAddItemSource,
+                    homeViewModel: homeViewModel,
                     wardrobeViewModel: wardrobeViewModel
                 )
                 .environmentObject(router)

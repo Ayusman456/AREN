@@ -6,7 +6,7 @@ struct DayDetailModalView: View {
     // MARK: - Debug Toggle
     // true  → borders on for this component only
     // false → follows ArenDebug.isDebug
-    private static let debug = true
+    private static let debug = false
 
     // MARK: - Layout
 

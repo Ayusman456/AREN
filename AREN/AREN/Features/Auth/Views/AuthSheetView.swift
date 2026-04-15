@@ -76,7 +76,7 @@ private enum AuthProvider {
     var helperText: String {
         switch self {
         case .apple:
-            return "Apple upgrade flow will attach your current anonymous wardrobe to an Apple identity."
+            return "Apple upgrade flow will attach your current anonymous wardrobe to an Apple identity." //test
         case .google:
             return "Google upgrade flow will attach your current anonymous wardrobe to a Google identity."
         }

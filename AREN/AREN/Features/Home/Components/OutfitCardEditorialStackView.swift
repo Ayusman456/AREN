@@ -15,13 +15,13 @@ extension View {
 }
 
 // MARK: - Model
+enum GarmentSource {
+    case asset(String)
+    case remote(URL)
+}
 
 struct OutfitCategory {
-    let items: [String]
-
-    init(items: [String]) {
-        self.items = items
-    }
+    let items: [GarmentSource]
 }
 
 // MARK: - View
@@ -47,19 +47,22 @@ struct OutfitCardEditorialStackView: View {
         static let garmentWidth: CGFloat = 257      // Garment image width — locked to Figma spec
         static let topsHeight: CGFloat = 216        // Tops row height — locked to Figma spec
         static let bottomsHeight: CGFloat = 246     // Bottoms row height — locked to Figma spec
-        static let shoesHeight: CGFloat = 93        // Shoes row height — locked to Figma spec
+        static let shoesHeight: CGFloat = 93
         static let rowSpacing: CGFloat = 8
         static let captionTopPadding: CGFloat = 16
         static let captionHorizontalPadding: CGFloat = 16
         static let canvasVerticalPadding: CGFloat = 8
+        static let topsWidth: CGFloat = 257
+        static let bottomsWidth: CGFloat = 233
+        static let shoesWidth: CGFloat = 95
     }
 
     // MARK: - Init
 
     init(
-        tops: OutfitCategory = OutfitCategory(items: ["shirt_blue"]),
-        bottoms: OutfitCategory = OutfitCategory(items: ["trousers_dark"]),
-        shoes: OutfitCategory = OutfitCategory(items: ["shoes_loafer"]),
+        tops: OutfitCategory = OutfitCategory(items: [.asset("shirt_blue")]),
+        bottoms: OutfitCategory = OutfitCategory(items: [.asset("trousers_dark")]),
+        shoes: OutfitCategory = OutfitCategory(items: [.asset("shoes_loafer")]),
         captionText: String = "Linen for the heat, loafers for the lunch"
     ) {
         self.tops = tops
@@ -89,6 +92,7 @@ struct OutfitCardEditorialStackView: View {
             SwipableGarmentView(
                 items: tops.items,
                 currentIndex: $topsIndex,
+                width: 257,
                 height: Layout.topsHeight,
                 showDebugBorders: showDebugBorders
             )
@@ -96,14 +100,15 @@ struct OutfitCardEditorialStackView: View {
             SwipableGarmentView(
                 items: bottoms.items,
                 currentIndex: $bottomsIndex,
+                width: 233,
                 height: Layout.bottomsHeight,
                 showDebugBorders: showDebugBorders
             )
-            .padding(.top, Layout.rowSpacing)
 
             SwipableGarmentView(
                 items: shoes.items,
                 currentIndex: $shoesIndex,
+                width: 95,
                 height: Layout.shoesHeight,
                 showDebugBorders: showDebugBorders
             )
@@ -143,12 +148,12 @@ struct OutfitCardEditorialStackView: View {
 
 private struct SwipableGarmentView: View {
 
-    let items: [String]
+    let items: [GarmentSource]
     @Binding var currentIndex: Int
+    let width: CGFloat
     let height: CGFloat
     let showDebugBorders: Bool
 
-    private let width: CGFloat = 257    // Garment width — locked to Figma spec
     @State private var lastIndex: Int = 0
 
     var body: some View {
@@ -160,6 +165,7 @@ private struct SwipableGarmentView: View {
                     ForEach(items.indices, id: \.self) { index in
                         garmentImage(items[index])
                             .frame(width: width, height: height)
+                            .clipped()
                             .tag(index)
                     }
                 }
@@ -189,23 +195,45 @@ private struct SwipableGarmentView: View {
             .animation(.easeInOut(duration: 0.2), value: currentIndex)
     }
 
-    private func garmentImage(_ assetName: String) -> some View {
-        let prefixed = assetName.hasPrefix("Outfit/") ? assetName : "Outfit/\(assetName)"
-        return Image(prefixed)
-            .interpolation(.high)
-            .antialiased(true)
-            .resizable()
-            .aspectRatio(contentMode: .fit)
+    private func garmentImage(_ source: GarmentSource) -> some View {
+        Group {
+            switch source {
+            case .asset(let name):
+                let prefixed = name.hasPrefix("Outfit/") ? name : "Outfit/\(name)"
+                Image(prefixed)
+                    .interpolation(.high)
+                    .antialiased(true)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            case .remote(let url):
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .interpolation(.high)
+                            .antialiased(true)
+                            .aspectRatio(contentMode: .fit)
+                    case .failure:
+                        Color(hex: "#F5F5F3")
+                    case .empty:
+                        Color(hex: "#F5F5F3")
+                    @unknown default:
+                        Color(hex: "#F5F5F3")
+                    }
+                }
+            }
+        }
     }
 }
 
 // MARK: - Preview
-
+// ✅ FIXED: Preview moved to file scope (outside any struct)
 #Preview {
     OutfitCardEditorialStackView(
-        tops: OutfitCategory(items: ["shirt_blue", "shirt_white", "polo_navy"]),
-        bottoms: OutfitCategory(items: ["trousers_dark", "chinos_stone"]),
-        shoes: OutfitCategory(items: ["shoes_loafer", "shoes_derby"]),
+        tops: OutfitCategory(items: [.asset("shirt_blue"), .asset("shirt_white")]),
+        bottoms: OutfitCategory(items: [.asset("trousers_dark")]),
+        shoes: OutfitCategory(items: [.asset("shoes_loafer")]),
         captionText: "Linen for the heat, loafers for the lunch"
     )
     .background(ArenColor.Surface.primary)
