@@ -7,6 +7,7 @@ struct HomeView: View {
     // MARK: - State
 
     @State private var isOutfitSaved = false
+    @State private var currentOutfitIndex: Int = 0
 
     // MARK: - Demo Data
     // TODO: Replace with real data from view model
@@ -36,17 +37,24 @@ struct HomeView: View {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                OutfitCardEditorialStackView(
-                    tops: OutfitCategory(items: homeViewModel.dailyOutfit.top
-                        .flatMap { URL(string: $0.imageURL ?? "") }
-                        .map { [.remote($0)] } ?? [.asset("shirt_blue")]),
-                    bottoms: OutfitCategory(items: homeViewModel.dailyOutfit.bottom
-                        .flatMap { URL(string: $0.imageURL ?? "") }
-                        .map { [.remote($0)] } ?? [.asset("trousers_dark")]),
-                    shoes: OutfitCategory(items: homeViewModel.dailyOutfit.shoes
-                        .flatMap { URL(string: $0.imageURL ?? "") }
-                        .map { [.remote($0)] } ?? [.asset("shoes_loafer")])
-                )
+                TabView(selection: $currentOutfitIndex) {
+                    ForEach(homeViewModel.outfits.indices, id: \.self) { index in
+                        let outfit = homeViewModel.outfits[index]
+                        OutfitCardEditorialStackView(
+                            tops: OutfitCategory(items: outfit.top
+                                .flatMap { URL(string: $0.imageURL ?? "") }
+                                .map { [.remote($0)] } ?? [.asset("shirt_blue")]),
+                            bottoms: OutfitCategory(items: outfit.bottom
+                                .flatMap { URL(string: $0.imageURL ?? "") }
+                                .map { [.remote($0)] } ?? [.asset("trousers_dark")]),
+                            shoes: OutfitCategory(items: outfit.shoes
+                                .flatMap { URL(string: $0.imageURL ?? "") }
+                                .map { [.remote($0)] } ?? [.asset("shoes_loafer")])
+                        )
+                        .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
                 .padding(.bottom, 8)
                 .overlay(alignment: .topTrailing) {
                     BookmarkSaveButtonView(isSaved: isOutfitSaved) {
