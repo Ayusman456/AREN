@@ -20,33 +20,68 @@ struct DailyOutfitRow: Decodable {
     }
 }
 
-// MARK: - ViewModel
+// MARK: - HomeViewModel
 
 @MainActor
 final class HomeViewModel: ObservableObject {
 
-    @Published var outfits: [DailyOutfit] = []
+    // MARK: - Published State
+
+    @Published var tops: [WardrobeItem] = []
+    @Published var bottoms: [WardrobeItem] = []
+    @Published var shoes: [WardrobeItem] = []
+
+    @Published var topIndex: Int = 0
+    @Published var bottomIndex: Int = 0
+    @Published var shoesIndex: Int = 0
+
+    @Published var reasoningText: String = ""
     @Published var isLoading: Bool = false
     @Published var error: String? = nil
+
+    // MARK: - Demo Fallback Constants
+
+    private enum Demo {
+        static let top = "shirt_001"
+        static let bottom = "trouser_001"
+        static let shoes = "shoes_001"
+    }
+
+    // MARK: - Private
 
     private let client = SupabaseService.shared.client
     private let totalOutfits = 8
 
     // MARK: - Public
 
-    func fetchDailyOutfit() async {
+    func loadOutfit() async {
         isLoading = true
         error = nil
 
         guard let userID = await SupabaseService.shared.currentUserID() else {
-            error = "No active session."
+            loadDemoFallback()
             isLoading = false
             return
         }
 
-        let today = todayString()
-
         do {
+            let fetchedTops = try await fetchItems(category: "Tops")
+            let fetchedBottoms = try await fetchItems(category: "Bottoms")
+            let fetchedShoes = try await fetchItems(category: "Shoes")
+
+            // If wardrobe is empty, fall back to demo
+            guard !fetchedTops.isEmpty || !fetchedBottoms.isEmpty || !fetchedShoes.isEmpty else {
+                loadDemoFallback()
+                isLoading = false
+                return
+            }
+
+            tops = fetchedTops
+            bottoms = fetchedBottoms
+            shoes = fetchedShoes
+
+            // Load or generate today's start indices
+            let today = todayString()
             let existing: [DailyOutfitRow] = try await client
                 .from("daily_outfits")
                 .select()
@@ -56,62 +91,25 @@ final class HomeViewModel: ObservableObject {
                 .execute()
                 .value
 
-            if !existing.isEmpty {
-                outfits = await resolve(rows: existing)
+            if let first = existing.first {
+                // Use persisted indices
+                topIndex = tops.firstIndex(where: { $0.id == first.topId }) ?? 0
+                bottomIndex = bottoms.firstIndex(where: { $0.id == first.bottomId }) ?? 0
+                shoesIndex = shoes.firstIndex(where: { $0.id == first.shoesId }) ?? 0
             } else {
-                let generated = try await generate(userID: userID, date: today)
-                outfits = await resolve(rows: generated)
+                // Generate and persist
+                try await generateAndPersist(userID: userID, date: today)
             }
+
         } catch {
             self.error = error.localizedDescription
+            loadDemoFallback()
         }
 
         isLoading = false
     }
 
-    // MARK: - Today's outfit (first in list)
-
-    var dailyOutfit: DailyOutfit {
-        outfits.first ?? DailyOutfit(top: nil, bottom: nil, shoes: nil)
-    }
-
-    // MARK: - Private
-
-    private func generate(userID: UUID, date: String) async throws -> [DailyOutfitRow] {
-        let tops = try await fetchItems(category: "Tops")
-        let bottoms = try await fetchItems(category: "Bottoms")
-        let shoes = try await fetchItems(category: "Shoes")
-
-        var rows: [[String: AnyJSON]] = []
-
-        for rank in 1...totalOutfits {
-            let row: [String: AnyJSON] = [
-                "user_id": .string(userID.uuidString),
-                "date": .string(date),
-                "rank": .double(Double(rank)),
-                "top_id": tops.randomElement().map { .string($0.id.uuidString) } ?? .null,
-                "bottom_id": bottoms.randomElement().map { .string($0.id.uuidString) } ?? .null,
-                "shoes_id": shoes.randomElement().map { .string($0.id.uuidString) } ?? .null
-            ]
-            rows.append(row)
-        }
-
-        try await client
-            .from("daily_outfits")
-            .insert(rows)
-            .execute()
-
-        let inserted: [DailyOutfitRow] = try await client
-            .from("daily_outfits")
-            .select()
-            .eq("user_id", value: userID)
-            .eq("date", value: date)
-            .order("rank", ascending: true)
-            .execute()
-            .value
-
-        return inserted
-    }
+    // MARK: - Private Helpers
 
     private func fetchItems(category: String) async throws -> [WardrobeItem] {
         try await client
@@ -122,35 +120,39 @@ final class HomeViewModel: ObservableObject {
             .value
     }
 
-    private func resolve(rows: [DailyOutfitRow]) async -> [DailyOutfit] {
-        await withTaskGroup(of: (Int, DailyOutfit).self) { group in
-            for row in rows {
-                group.addTask {
-                    async let top = self.fetchItem(id: row.topId)
-                    async let bottom = self.fetchItem(id: row.bottomId)
-                    async let shoes = self.fetchItem(id: row.shoesId)
-                    let outfit = await DailyOutfit(top: top, bottom: bottom, shoes: shoes)
-                    return (row.rank, outfit)
-                }
-            }
+    private func generateAndPersist(userID: UUID, date: String) async throws {
+        // Set random start indices
+        topIndex = tops.indices.randomElement() ?? 0
+        bottomIndex = bottoms.indices.randomElement() ?? 0
+        shoesIndex = shoes.indices.randomElement() ?? 0
 
-            var results: [(Int, DailyOutfit)] = []
-            for await result in group {
-                results.append(result)
-            }
-            return results.sorted { $0.0 < $1.0 }.map { $0.1 }
+        // Persist 8 combinations to daily_outfits
+        var rows: [[String: AnyJSON]] = []
+        for rank in 1...totalOutfits {
+            let row: [String: AnyJSON] = [
+                "user_id": .string(userID.uuidString),
+                "date": .string(date),
+                "rank": .double(Double(rank)),
+                "top_id": tops.indices.randomElement().map { .string(tops[$0].id.uuidString) } ?? .null,
+                "bottom_id": bottoms.indices.randomElement().map { .string(bottoms[$0].id.uuidString) } ?? .null,
+                "shoes_id": shoes.indices.randomElement().map { .string(shoes[$0].id.uuidString) } ?? .null
+            ]
+            rows.append(row)
         }
+
+        try await client
+            .from("daily_outfits")
+            .insert(rows)
+            .execute()
     }
 
-    private func fetchItem(id: UUID?) async -> WardrobeItem? {
-        guard let id else { return nil }
-        return try? await client
-            .from("clothing_items")
-            .select()
-            .eq("id", value: id)
-            .single()
-            .execute()
-            .value
+    private func loadDemoFallback() {
+        tops = [WardrobeItem(id: UUID(), category: "Tops", imageURL: nil, assetName: Demo.top)]
+        bottoms = [WardrobeItem(id: UUID(), category: "Bottoms", imageURL: nil, assetName: Demo.bottom)]
+        shoes = [WardrobeItem(id: UUID(), category: "Shoes", imageURL: nil, assetName: Demo.shoes)]
+        topIndex = 0
+        bottomIndex = 0
+        shoesIndex = 0
     }
 
     private func todayString() -> String {
