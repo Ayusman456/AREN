@@ -22,7 +22,7 @@ extension View {
 struct OutfitCardEditorialStackView: View {
 
     #if DEBUG
-    private let showDebugBorders = false
+    private let showDebugBorders = true
     #else
     private let showDebugBorders = false
     #endif

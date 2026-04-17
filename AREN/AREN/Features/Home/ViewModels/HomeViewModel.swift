@@ -13,12 +13,20 @@ struct DailyOutfitRow: Decodable {
     let shoesId: UUID?
 
     enum CodingKeys: String, CodingKey {
-        case id
-        case rank
+        case id, rank
         case topId    = "top_id"
         case bottomId = "bottom_id"
         case shoesId  = "shoes_id"
     }
+}
+
+// MARK: - Confirmation Button State
+
+enum ConfirmOutfitCTAState: Equatable {
+    case `default`
+    case loading
+    case error
+    case confirmed
 }
 
 // MARK: - Typed Error
@@ -74,14 +82,20 @@ final class HomeViewModel: ObservableObject {
     @Published var error: HomeError?      = nil
     @Published var isOutfitSaved: Bool    = false
 
+    // Confirmation flow state
+    @Published private(set) var isLoadingConfirmation: Bool = false
+    @Published private(set) var confirmationError: Error?   = nil
+    @Published private(set) var isConfirmed: Bool           = false
+
     // MARK: - Private
 
     private let client         = SupabaseService.shared.client
     private let totalOutfits   = 8
     private var loadTask: Task<Void, Never>?
     private var hasLoaded      = false
+    private var todayOutfitRowID: UUID?  // Cache for confirm flow
 
-    // MARK: - Static Helpers (created once)
+    // MARK: - Static Helpers
 
     private static let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -95,15 +109,22 @@ final class HomeViewModel: ObservableObject {
         return candidates.first { UIFont(name: $0, size: 11) != nil } ?? ""
     }()
 
+    // MARK: - Computed State for View
+
+    var confirmCTAState: ConfirmOutfitCTAState {
+        if isLoadingConfirmation { return .loading }
+        if confirmationError != nil { return .error }
+        if isConfirmed { return .confirmed }
+        return .default
+    }
+
     // MARK: - Public API
 
-    /// Primary entry point. Guards against duplicate loads.
     func loadOutfitIfNeeded() {
         guard !hasLoaded else { return }
         loadOutfit()
     }
 
-    /// Force-reload — cancels any in-flight task and restarts.
     func loadOutfit() {
         loadTask?.cancel()
         loadTask = Task { await _loadOutfit() }
@@ -120,10 +141,9 @@ final class HomeViewModel: ObservableObject {
             return
         }
 
-        // Unauthenticated — demo fallback
         guard let userID = await SupabaseService.shared.currentUserID() else {
             loadDemoFallback()
-            hasLoaded = true  // FIX 1: prevent re-load on every call
+            hasLoaded = true
             isLoading = false
             return
         }
@@ -133,15 +153,11 @@ final class HomeViewModel: ObservableObject {
             let fetchedBottoms = try await fetchItems(category: "Bottoms")
             let fetchedShoes   = try await fetchItems(category: "Shoes")
 
-            guard !Task.isCancelled else {
-                isLoading = false
-                return
-            }
+            guard !Task.isCancelled else { isLoading = false; return }
 
-            // Empty wardrobe — demo fallback
             guard !fetchedTops.isEmpty || !fetchedBottoms.isEmpty || !fetchedShoes.isEmpty else {
                 loadDemoFallback()
-                hasLoaded = true  // FIX 1: prevent re-load on every call
+                hasLoaded = true
                 isLoading = false
                 return
             }
@@ -162,21 +178,23 @@ final class HomeViewModel: ObservableObject {
                 .value
 
             if let first = existing.first {
+                self.todayOutfitRowID = first.id  // ✅ Cache for confirmation
                 topIndex    = tops.firstIndex(where: { $0.id == first.topId })       ?? 0
                 bottomIndex = bottoms.firstIndex(where: { $0.id == first.bottomId }) ?? 0
                 shoesIndex  = shoes.firstIndex(where: { $0.id == first.shoesId })    ?? 0
             } else {
-                try await generateAndPersist(userID: userID, date: today)
+                let outfitID = try await generateAndPersist(userID: userID, date: today)
+                self.todayOutfitRowID = outfitID
             }
 
             hasLoaded = true
 
         } catch is CancellationError {
-            // Silently abort — new load already in flight
+            // Silently abort
         } catch {
             self.error = .fetchFailed(underlying: error)
             loadDemoFallback()
-            hasLoaded = true  // FIX 1: prevent retry loop on persistent error
+            hasLoaded = true
         }
 
         isLoading = false
@@ -194,18 +212,12 @@ final class HomeViewModel: ObservableObject {
     }
 
     // MARK: - Generate & Persist
-    // NOTE: Currently uses index-cycling to guarantee variety across 8 combinations.
-    // Will be replaced with scoring pipeline (occasion + weather + colour harmony)
-    // once clothing_items schema has formality_score, weight_category, color columns
-    // and wear_log table exists. See: Notion — Home Screen Outfit Selection Logic.
 
-    private func generateAndPersist(userID: UUID, date: String) async throws {
-        // FIX 2: Cycle through indices to guarantee variety — no duplicate combinations
+    private func generateAndPersist(userID: UUID, date: String) async throws -> UUID {
         let topCount    = tops.count
         let bottomCount = bottoms.count
         let shoesCount  = shoes.count
 
-        // Rank-1 outfit: random starting point within each category
         let firstTopIdx    = topCount    > 0 ? Int.random(in: 0..<topCount)    : 0
         let firstBottomIdx = bottomCount > 0 ? Int.random(in: 0..<bottomCount) : 0
         let firstShoesIdx  = shoesCount  > 0 ? Int.random(in: 0..<shoesCount)  : 0
@@ -215,22 +227,28 @@ final class HomeViewModel: ObservableObject {
         shoesIndex  = firstShoesIdx
 
         var rows: [[String: AnyJSON]] = []
+        var rankOneID: UUID?
 
         for rank in 1...totalOutfits {
-            // Cycle through available items — guarantees variety without repetition
-            // until items are exhausted, then wraps around
             let tIdx = topCount    > 0 ? (firstTopIdx    + rank - 1) % topCount    : 0
             let bIdx = bottomCount > 0 ? (firstBottomIdx + rank - 1) % bottomCount : 0
             let sIdx = shoesCount  > 0 ? (firstShoesIdx  + rank - 1) % shoesCount  : 0
 
-            let row: [String: AnyJSON] = [
+            var row: [String: AnyJSON] = [
                 "user_id":   .string(userID.uuidString),
                 "date":      .string(date),
                 "rank":      .double(Double(rank)),
                 "top_id":    tops.isEmpty    ? .null : .string(tops[tIdx].id.uuidString),
                 "bottom_id": bottoms.isEmpty ? .null : .string(bottoms[bIdx].id.uuidString),
-                "shoes_id":  shoes.isEmpty   ? .null : .string(shoes[sIdx].id.uuidString)
+                "shoes_id":  shoes.isEmpty   ? .null : .string(shoes[sIdx].id.uuidString),
+                "is_confirmed": .bool(false)
             ]
+            if rank == 1 {
+                // We'll capture the inserted ID via Supabase's returning clause if available,
+                // otherwise we generate one proactively.
+                rankOneID = UUID()
+                row["id"] = .string(rankOneID!.uuidString)
+            }
             rows.append(row)
         }
 
@@ -239,8 +257,87 @@ final class HomeViewModel: ObservableObject {
                 .from("daily_outfits")
                 .insert(rows)
                 .execute()
+
+            return rankOneID ?? UUID()
+
         } catch {
             throw HomeError.persistFailed(underlying: error)
+        }
+    }
+
+    // MARK: - Confirm Outfit
+
+    func confirmOutfit() async {
+        guard !isConfirmed, !isLoadingConfirmation else { return }
+        
+        await MainActor.run {
+            self.isLoadingConfirmation = true
+            self.confirmationError = nil
+        }
+        
+        guard !Task.isCancelled else { return }
+        
+        let topId    = tops.indices.contains(topIndex)    ? tops[topIndex].id    : nil
+        let bottomId = bottoms.indices.contains(bottomIndex) ? bottoms[bottomIndex].id : nil
+        let shoesId  = shoes.indices.contains(shoesIndex)  ? shoes[shoesIndex].id  : nil
+        
+        let itemIds = [topId, bottomId, shoesId].compactMap { $0 }
+        guard !itemIds.isEmpty, let userID = await SupabaseService.shared.currentUserID() else {
+            await MainActor.run {
+                self.isLoadingConfirmation = false
+                self.confirmationError = NSError(domain: "ConfirmOutfit", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing user or items"])
+            }
+            return
+        }
+        
+        guard let outfitRowID = todayOutfitRowID else {
+            await MainActor.run {
+                self.isLoadingConfirmation = false
+                self.confirmationError = NSError(domain: "ConfirmOutfit", code: -2, userInfo: [NSLocalizedDescriptionKey: "No outfit row to confirm"])
+            }
+            return
+        }
+        
+        do {
+            // Insert wear_log entries
+            let iso = ISO8601DateFormatter()
+            let wornAt = iso.string(from: Date())
+            let wearLogEntries = itemIds.map { itemId in
+                [
+                    "user_id": AnyJSON.string(userID.uuidString),
+                    "item_id": AnyJSON.string(itemId.uuidString),
+                    "outfit_id": AnyJSON.string(outfitRowID.uuidString),
+                    "worn_at":   AnyJSON.string(wornAt)
+                ] as [String: AnyJSON]
+            }
+            
+            if !wearLogEntries.isEmpty {
+                try await client
+                    .from("wear_log")
+                    .insert(wearLogEntries)
+                    .execute()
+            }
+            
+            // Mark outfit confirmed
+            try await client
+                .from("daily_outfits")
+                .update(["is_confirmed": AnyJSON.bool(true)])
+                .eq("id", value: outfitRowID.uuidString)
+                .execute()
+            
+            await MainActor.run {
+                self.isConfirmed = true
+                self.isLoadingConfirmation = false
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+            }
+            
+        } catch {
+            await MainActor.run {
+                self.confirmationError = error
+                self.isLoadingConfirmation = false
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
+            }
+            print("confirmOutfit failed: \(error)")
         }
     }
 
@@ -264,6 +361,7 @@ final class HomeViewModel: ObservableObject {
         topIndex    = 0
         bottomIndex = 0
         shoesIndex  = 0
+        isConfirmed = false
     }
 
     // MARK: - Helpers
