@@ -2,6 +2,12 @@ import SwiftUI
 import Kingfisher
 
 struct WardrobeScreen: View {
+    #if DEBUG
+    private let showDebugBorders = true
+    #else
+    private let showDebugBorders = false
+    #endif
+
     let onFiltersTap: () -> Void
     let onSearchTap: () -> Void
     let onAddTap: () -> Void
@@ -36,6 +42,7 @@ struct WardrobeScreen: View {
                 onSearchTap: onSearchTap,
                 onAddTap: onAddTap
             )
+            .debugBorder(if: showDebugBorders, color: .orange)
 
             WardrobeTabToggleView(
                 selectedTab: $selectedTab,
@@ -45,6 +52,7 @@ struct WardrobeScreen: View {
             .onChange(of: selectedTab) {
                 selectedCategory = "All"
             }
+            .debugBorder(if: showDebugBorders, color: .blue)
 
             WardrobeCategoryFilterStripView(
                 selectedCategory: selectedCategory,
@@ -52,6 +60,7 @@ struct WardrobeScreen: View {
             ) { category in
                 selectedCategory = category
             }
+            .debugBorder(if: showDebugBorders, color: .green)
 
             ScrollView(.vertical, showsIndicators: false) {
                 if selectedTab == .items {
@@ -60,11 +69,13 @@ struct WardrobeScreen: View {
                     outfitsGrid
                 }
             }
+            .debugBorder(if: showDebugBorders, color: .purple)
         }
         .background(ArenColor.Surface.primary)
         .task {
             await viewModel.fetchItems()
         }
+        .debugBorder(if: showDebugBorders, color: .red)
     }
 
     // MARK: - Items Grid
@@ -73,9 +84,11 @@ struct WardrobeScreen: View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 32) {
             ForEach(filteredItems) { item in
                 WardrobeItemCell(item: item)
+                    .debugBorder(if: showDebugBorders, color: .pink)
             }
         }
         .padding(.horizontal, 20)
+        .debugBorder(if: showDebugBorders, color: .cyan)
     }
 
     // MARK: - Outfits Grid
@@ -83,10 +96,13 @@ struct WardrobeScreen: View {
     private var outfitsGrid: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 32) {
             ForEach(viewModel.outfits) { outfit in
-                // wire WardrobeOutfitCell here once model is updated
+                Group {
+                    // wire WardrobeOutfitCell here once model is updated
+                }
             }
         }
         .padding(.horizontal, 20)
+        .debugBorder(if: showDebugBorders, color: .mint)
     }
 
     // MARK: - Filtered Items

@@ -92,6 +92,9 @@ struct AppShellView: View {
                                     )
                                     print("Saved clothing item: \(id)")
                                     await wardrobeViewModel.fetchItems()
+                                    await MainActor.run {
+                                        homeViewModel.loadOutfit()
+                                    }
                                 } catch {
                                     print("Upload failed: \(error)")
                                 }

@@ -149,9 +149,10 @@ final class HomeViewModel: ObservableObject {
         }
 
         do {
-            let fetchedTops    = try await fetchItems(category: "Tops")
-            let fetchedBottoms = try await fetchItems(category: "Bottoms")
-            let fetchedShoes   = try await fetchItems(category: "Shoes")
+            let fetchedItems   = try await fetchItems(userID: userID)
+            let fetchedTops    = fetchedItems.filter { normalizedCategory(for: $0) == .tops }
+            let fetchedBottoms = fetchedItems.filter { normalizedCategory(for: $0) == .bottoms }
+            let fetchedShoes   = fetchedItems.filter { normalizedCategory(for: $0) == .shoes }
 
             guard !Task.isCancelled else { isLoading = false; return }
 
@@ -167,24 +168,35 @@ final class HomeViewModel: ObservableObject {
             shoes   = fetchedShoes
 
             let today = todayString()
+            do {
+                let existing: [DailyOutfitRow] = try await client
+                    .from("daily_outfits")
+                    .select()
+                    .eq("user_id", value: userID)
+                    .eq("date", value: today)
+                    .order("rank", ascending: true)
+                    .execute()
+                    .value
 
-            let existing: [DailyOutfitRow] = try await client
-                .from("daily_outfits")
-                .select()
-                .eq("user_id", value: userID)
-                .eq("date", value: today)
-                .order("rank", ascending: true)
-                .execute()
-                .value
-
-            if let first = existing.first {
-                self.todayOutfitRowID = first.id  // ✅ Cache for confirmation
-                topIndex    = tops.firstIndex(where: { $0.id == first.topId })       ?? 0
-                bottomIndex = bottoms.firstIndex(where: { $0.id == first.bottomId }) ?? 0
-                shoesIndex  = shoes.firstIndex(where: { $0.id == first.shoesId })    ?? 0
-            } else {
-                let outfitID = try await generateAndPersist(userID: userID, date: today)
-                self.todayOutfitRowID = outfitID
+                if let first = existing.first {
+                    self.todayOutfitRowID = first.id
+                    topIndex    = tops.firstIndex(where: { $0.id == first.topId })       ?? firstAvailableIndex(in: tops)
+                    bottomIndex = bottoms.firstIndex(where: { $0.id == first.bottomId }) ?? firstAvailableIndex(in: bottoms)
+                    shoesIndex  = shoes.firstIndex(where: { $0.id == first.shoesId })    ?? firstAvailableIndex(in: shoes)
+                } else {
+                    do {
+                        let outfitID = try await generateAndPersist(userID: userID, date: today)
+                        self.todayOutfitRowID = outfitID
+                    } catch {
+                        self.todayOutfitRowID = nil
+                        applyLocalOutfitSelectionFallback()
+                        print("HomeViewModel daily_outfits persist failed, using local fallback: \(error)")
+                    }
+                }
+            } catch {
+                self.todayOutfitRowID = nil
+                applyLocalOutfitSelectionFallback()
+                print("HomeViewModel daily_outfits fetch failed, using local fallback: \(error)")
             }
 
             hasLoaded = true
@@ -202,13 +214,65 @@ final class HomeViewModel: ObservableObject {
 
     // MARK: - Fetch
 
-    private func fetchItems(category: String) async throws -> [WardrobeItem] {
+    private func fetchItems(userID: UUID) async throws -> [WardrobeItem] {
         try await client
             .from("clothing_items")
             .select()
-            .eq("category", value: category)
+            .eq("user_id", value: userID.uuidString)
             .execute()
             .value
+    }
+
+    private enum OutfitCategoryBucket {
+        case tops
+        case bottoms
+        case shoes
+        case other
+    }
+
+    private func normalizedCategory(for item: WardrobeItem) -> OutfitCategoryBucket {
+        guard let rawCategory = item.category?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
+              !rawCategory.isEmpty else {
+            return .other
+        }
+
+        if matchesAnyKeyword(in: rawCategory, keywords: [
+            "top", "tops", "shirt", "t-shirt", "tshirt", "tee", "blouse",
+            "jacket", "coat", "hoodie", "sweater", "sweatshirt"
+        ]) {
+            return .tops
+        }
+
+        if matchesAnyKeyword(in: rawCategory, keywords: [
+            "bottom", "bottoms", "trouser", "trousers", "pant", "pants",
+            "jean", "jeans", "skirt", "shorts"
+        ]) {
+            return .bottoms
+        }
+
+        if matchesAnyKeyword(in: rawCategory, keywords: [
+            "shoe", "shoes", "sneaker", "sneakers", "boot", "boots",
+            "sandal", "sandals", "loafer", "loafers", "heel", "heels",
+            "footwear"
+        ]) {
+            return .shoes
+        }
+
+        return .other
+    }
+
+    private func matchesAnyKeyword(in value: String, keywords: [String]) -> Bool {
+        keywords.contains { value.contains($0) }
+    }
+
+    private func firstAvailableIndex(in items: [WardrobeItem]) -> Int {
+        items.isEmpty ? 0 : items.startIndex
+    }
+
+    private func applyLocalOutfitSelectionFallback() {
+        topIndex = firstAvailableIndex(in: tops)
+        bottomIndex = firstAvailableIndex(in: bottoms)
+        shoesIndex = firstAvailableIndex(in: shoes)
     }
 
     // MARK: - Generate & Persist

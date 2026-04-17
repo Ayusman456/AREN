@@ -274,7 +274,7 @@ private struct SwipableGarmentRow: View {
         if let source = item.garmentSource {
             switch source {
             case .asset(let name):
-                Image("Outfit/\(name)")
+                Image(resolvedAssetName(for: name))
                     .interpolation(.high)
                     .antialiased(true)
                     .resizable()
@@ -294,6 +294,17 @@ private struct SwipableGarmentRow: View {
         } else {
             Color(ArenColor.Surface.secondary)
         }
+    }
+
+    private func resolvedAssetName(for name: String) -> String {
+        let prefixedName = "Outfit/\(name)"
+        if UIImage(named: prefixedName) != nil {
+            return prefixedName
+        }
+        if UIImage(named: name) != nil {
+            return name
+        }
+        return prefixedName
     }
 }
 
