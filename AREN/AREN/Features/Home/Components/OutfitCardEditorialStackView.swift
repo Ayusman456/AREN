@@ -1,18 +1,5 @@
 import SwiftUI
-import UIKit
-
-// MARK: - Debug Border Extension
-
-extension View {
-    @ViewBuilder
-    func debugBorder(if show: Bool, color: Color = .red, width: CGFloat = 2) -> some View {
-        if show {
-            self.border(color, width: width)
-        } else {
-            self
-        }
-    }
-}
+import Kingfisher
 
 // MARK: - GarmentSource
 
@@ -21,11 +8,24 @@ enum GarmentSource {
     case remote(URL)
 }
 
+// MARK: - Debug Border
+
+extension View {
+    @ViewBuilder
+    func debugBorder(if show: Bool, color: Color = .red, width: CGFloat = 2) -> some View {
+        if show { self.border(color, width: width) } else { self }
+    }
+}
+
 // MARK: - View
 
 struct OutfitCardEditorialStackView: View {
 
+    #if DEBUG
     private let showDebugBorders = false
+    #else
+    private let showDebugBorders = false
+    #endif
 
     let tops: [WardrobeItem]
     let bottoms: [WardrobeItem]
@@ -37,22 +37,6 @@ struct OutfitCardEditorialStackView: View {
 
     let captionText: String
 
-    // MARK: - Layout Constants
-
-    private enum Layout {
-        static let canvasWidth: CGFloat = 280
-        static let topsWidth: CGFloat = 257
-        static let bottomsWidth: CGFloat = 233
-        static let shoesWidth: CGFloat = 95
-        static let topsHeight: CGFloat = 216
-        static let bottomsHeight: CGFloat = 246
-        static let shoesHeight: CGFloat = 93
-        static let rowSpacing: CGFloat = 8
-        static let captionTopPadding: CGFloat = 16
-        static let captionHorizontalPadding: CGFloat = 16
-        static let canvasVerticalPadding: CGFloat = 8
-    }
-
     // MARK: - Body
 
     var body: some View {
@@ -62,7 +46,7 @@ struct OutfitCardEditorialStackView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         .background(ArenColor.Surface.primary)
-        .accessibilityElement(children: .ignore)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(captionText)
         .debugBorder(if: showDebugBorders, color: .red)
     }
@@ -74,31 +58,34 @@ struct OutfitCardEditorialStackView: View {
             SwipableGarmentRow(
                 items: tops,
                 currentIndex: $topIndex,
-                width: Layout.topsWidth,
-                height: Layout.topsHeight,
+                width: OutfitLayout.topsWidth,
+                height: OutfitLayout.topsHeight,
+                accessibilityLabel: "Top",
                 showDebugBorders: showDebugBorders
             )
 
             SwipableGarmentRow(
                 items: bottoms,
                 currentIndex: $bottomIndex,
-                width: Layout.bottomsWidth,
-                height: Layout.bottomsHeight,
+                width: OutfitLayout.bottomsWidth,
+                height: OutfitLayout.bottomsHeight,
+                accessibilityLabel: "Bottom",
                 showDebugBorders: showDebugBorders
             )
-            .padding(.top, Layout.rowSpacing)
+            .padding(.top, OutfitLayout.rowSpacing)
 
             SwipableGarmentRow(
                 items: shoes,
                 currentIndex: $shoesIndex,
-                width: Layout.shoesWidth,
-                height: Layout.shoesHeight,
+                width: OutfitLayout.shoesWidth,
+                height: OutfitLayout.shoesHeight,
+                accessibilityLabel: "Shoes",
                 showDebugBorders: showDebugBorders
             )
-            .padding(.top, Layout.rowSpacing)
+            .padding(.top, OutfitLayout.rowSpacing)
         }
-        .frame(width: Layout.canvasWidth, alignment: .center)
-        .padding(.vertical, Layout.canvasVerticalPadding)
+        .frame(width: OutfitLayout.canvasWidth, alignment: .center)
+        .padding(.vertical, OutfitLayout.canvasVerticalPadding)
         .debugBorder(if: showDebugBorders, color: .blue)
     }
 
@@ -110,17 +97,14 @@ struct OutfitCardEditorialStackView: View {
             .foregroundStyle(ArenColor.Text.secondary)
             .multilineTextAlignment(.center)
             .lineLimit(2)
-            .padding(.top, Layout.captionTopPadding)
-            .padding(.horizontal, Layout.captionHorizontalPadding)
+            .padding(.top, 16)
+            .padding(.horizontal, 16)
             .debugBorder(if: showDebugBorders, color: .yellow)
     }
 
     private var captionFont: Font {
-        let candidates = ["HelveticaNowText-Light", "HelveticaNowText-Regular"]
-        for name in candidates where UIFont(name: name, size: 11) != nil {
-            return .custom(name, size: 11)
-        }
-        return .system(size: 11, weight: .light)
+        let name = HomeViewModel.resolvedCaptionFontName
+        return name.isEmpty ? .system(size: 11, weight: .light) : .custom(name, size: 11)
     }
 }
 
@@ -132,48 +116,57 @@ private struct SwipableGarmentRow: View {
     @Binding var currentIndex: Int
     let width: CGFloat
     let height: CGFloat
+    let accessibilityLabel: String
     let showDebugBorders: Bool
 
-    @State private var dragOffset: CGFloat = 0
-    @State private var showFlash: Bool = false
+    @State private var dragOffset: CGFloat  = 0
+    @State private var flashOpacity: Double = 0
+
+    // FIX 4: @State so generator persists across SwiftUI re-renders
+    @State private var feedbackGenerator = UIImpactFeedbackGenerator(style: .light)
 
     private let dragThreshold: CGFloat = 40
 
-    var body: some View {
-        guard !items.isEmpty else { return AnyView(EmptyView()) }
+    // MARK: - Body
 
-        return AnyView(
+    @ViewBuilder
+    var body: some View {
+        if items.isEmpty {
+            Color(ArenColor.Surface.secondary)
+                .frame(width: width, height: height)
+        } else {
             ZStack(alignment: .topLeading) {
-                // Current item
                 garmentImage(items[currentIndex])
                     .frame(width: width, height: height)
                     .clipped()
                     .offset(x: dragOffset)
 
-                // Adjacent peek — next item
-                if dragOffset < 0, currentIndex < items.count - 1 {
+                // Peek — next
+                if dragOffset < -8, currentIndex < items.count - 1 {
                     garmentImage(items[currentIndex + 1])
                         .frame(width: width, height: height)
                         .clipped()
                         .offset(x: width + dragOffset)
                         .mask(
                             LinearGradient(
-                                gradient: Gradient(colors: [.clear, .white]),
+                                // FIX 5: use surface color — not hardcoded .white
+                                gradient: Gradient(colors: [.clear, Color(ArenColor.Surface.primary)]),
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
                         )
                 }
 
-                // Adjacent peek — previous item
-                if dragOffset > 0, currentIndex > 0 {
+                // Peek — previous
+                if dragOffset > 8, currentIndex > 0 {
                     garmentImage(items[currentIndex - 1])
                         .frame(width: width, height: height)
                         .clipped()
                         .offset(x: -width + dragOffset)
                         .mask(
                             LinearGradient(
-                                gradient: Gradient(colors: [.white, .clear]),
+                                // FIX 5: use surface color — not hardcoded .white
+                                gradient: Gradient(colors: [Color(ArenColor.Surface.primary), .clear]),
                                 startPoint: .leading,
                                 endPoint: .trailing
                             )
@@ -181,13 +174,11 @@ private struct SwipableGarmentRow: View {
                 }
 
                 // Snap flash overlay
-                if showFlash {
-                    Color.white
-                        .frame(width: width, height: height)
-                        .allowsHitTesting(false)
-                }
+                Color.white
+                    .frame(width: width, height: height)
+                    .opacity(flashOpacity)
+                    .allowsHitTesting(false)
 
-                // Counter
                 if items.count > 1 {
                     counterLabel
                 }
@@ -195,8 +186,16 @@ private struct SwipableGarmentRow: View {
             .frame(width: width, height: height)
             .clipped()
             .gesture(dragGesture)
+            .accessibilityLabel("\(accessibilityLabel), \(currentIndex + 1) of \(items.count)")
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: snap(to: currentIndex + 1)
+                case .decrement: snap(to: currentIndex - 1)
+                @unknown default: break
+                }
+            }
             .debugBorder(if: showDebugBorders, color: .green)
-        )
+        }
     }
 
     // MARK: - Drag Gesture
@@ -204,31 +203,28 @@ private struct SwipableGarmentRow: View {
     private var dragGesture: some Gesture {
         DragGesture()
             .onChanged { value in
-                let translation = value.translation.width
-                // Rubber band at boundaries
-                if (currentIndex == 0 && translation > 0) ||
-                   (currentIndex == items.count - 1 && translation < 0) {
-                    dragOffset = translation * 0.2
+                let t = value.translation.width
+                if (currentIndex == 0 && t > 0) ||
+                   (currentIndex == items.count - 1 && t < 0) {
+                    dragOffset = t * 0.2   // rubber-band at boundaries
                 } else {
-                    dragOffset = translation
+                    dragOffset = t
                 }
             }
             .onEnded { value in
-                let translation = value.translation.width
-                let atStart = currentIndex == 0 && translation > 0
-                let atEnd = currentIndex == items.count - 1 && translation < 0
+                let t      = value.translation.width
+                let atStart = currentIndex == 0 && t > 0
+                let atEnd   = currentIndex == items.count - 1 && t < 0
 
                 if atStart || atEnd {
-                    // Boundary — shake feedback, spring back
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.5)) {
                         dragOffset = 0
                     }
-                } else if translation < -dragThreshold {
+                } else if t < -dragThreshold {
                     snap(to: currentIndex + 1)
-                } else if translation > dragThreshold {
+                } else if t > dragThreshold {
                     snap(to: currentIndex - 1)
                 } else {
-                    // Below threshold — spring back
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         dragOffset = 0
                     }
@@ -240,7 +236,8 @@ private struct SwipableGarmentRow: View {
 
     private func snap(to index: Int) {
         guard items.indices.contains(index) else { return }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        feedbackGenerator.prepare()
+        feedbackGenerator.impactOccurred()
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             dragOffset = 0
         }
@@ -248,10 +245,12 @@ private struct SwipableGarmentRow: View {
         triggerFlash()
     }
 
+    // MARK: - Flash
+
     private func triggerFlash() {
-        showFlash = true
-        withAnimation(.easeOut(duration: 0.15)) {
-            showFlash = false
+        flashOpacity = 0.5
+        withAnimation(.easeOut(duration: 0.2)) {
+            flashOpacity = 0
         }
     }
 
@@ -259,7 +258,7 @@ private struct SwipableGarmentRow: View {
 
     private var counterLabel: some View {
         Text("\(currentIndex + 1) / \(items.count)")
-            .font(.custom("Helvetica Now Text", size: 9).weight(.light))
+            .font(.custom("HelveticaNowText-Light", size: 9))
             .foregroundStyle(ArenColor.Text.tertiary)
             .padding(.top, 8)
             .padding(.leading, 8)
@@ -268,36 +267,32 @@ private struct SwipableGarmentRow: View {
 
     // MARK: - Garment Image
 
+    // FIX 6: Kingfisher for remote — caching, retry, progressive loading
+    // FIX 7: Outfit/ namespace prefix resolved here, not in garmentSource
+    @ViewBuilder
     private func garmentImage(_ item: WardrobeItem) -> some View {
-        Group {
-            if let source = item.garmentSource {
-                switch source {
-                case .asset(let name):
-                    let prefixed = name.hasPrefix("Outfit/") ? name : "Outfit/\(name)"
-                    Image(prefixed)
-                        .interpolation(.high)
-                        .antialiased(true)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                case .remote(let url):
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .interpolation(.high)
-                                .antialiased(true)
-                                .aspectRatio(contentMode: .fit)
-                        case .failure, .empty:
-                            Color(hex: "#F5F5F3")
-                        @unknown default:
-                            Color(hex: "#F5F5F3")
-                        }
+        if let source = item.garmentSource {
+            switch source {
+            case .asset(let name):
+                Image("Outfit/\(name)")
+                    .interpolation(.high)
+                    .antialiased(true)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+
+            case .remote(let url):
+                KFImage(url)
+                    .placeholder {
+                        Color(ArenColor.Surface.secondary)
                     }
-                }
-            } else {
-                Color(hex: "#F5F5F3")
+                    .retry(maxCount: 2, interval: .seconds(1))
+                    .interpolation(.high)
+                    .antialiased(true)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
             }
+        } else {
+            Color(ArenColor.Surface.secondary)
         }
     }
 }
@@ -306,12 +301,12 @@ private struct SwipableGarmentRow: View {
 
 #Preview {
     OutfitCardEditorialStackView(
-        tops: [WardrobeItem(id: UUID(), category: "Tops", imageURL: nil, assetName: "shirt_001")],
-        bottoms: [WardrobeItem(id: UUID(), category: "Bottoms", imageURL: nil, assetName: "trouser_001")],
-        shoes: [WardrobeItem(id: UUID(), category: "Shoes", imageURL: nil, assetName: "shoes_001")],
-        topIndex: .constant(0),
+        tops:    [WardrobeItem(id: UUID(uuidString: "00000000-0000-0000-0001-000000000001")!, category: "Tops",    imageURL: nil, assetName: "shirt_001")],
+        bottoms: [WardrobeItem(id: UUID(uuidString: "00000000-0000-0000-0002-000000000001")!, category: "Bottoms", imageURL: nil, assetName: "trouser_001")],
+        shoes:   [WardrobeItem(id: UUID(uuidString: "00000000-0000-0000-0003-000000000001")!, category: "Shoes",   imageURL: nil, assetName: "shoes_001")],
+        topIndex:    .constant(0),
         bottomIndex: .constant(0),
-        shoesIndex: .constant(0),
+        shoesIndex:  .constant(0),
         captionText: "Your outfit for today"
     )
     .background(ArenColor.Surface.primary)
