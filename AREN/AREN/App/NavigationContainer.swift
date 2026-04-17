@@ -27,9 +27,12 @@ struct NavigationContainer: View {
                 .navigationDestination(for: AppDestination.self) { destination in
                     switch destination {
                     case .wardrobeSearch:
-                        WardrobeSearchScreen(onCancelTap: { router.pop() })
-                            .navigationBarHidden(true)
-                            .toolbarBackground(.hidden, for: .navigationBar)
+                        WardrobeSearchScreen(
+                            onCancelTap: { router.pop() },
+                            wardrobeViewModel: wardrobeViewModel
+                        )
+                        .navigationBarHidden(true)
+                        .toolbarBackground(.hidden, for: .navigationBar)
                     case .addItem:
                         EmptyView()
                     }
@@ -67,4 +70,3 @@ struct NavigationContainer: View {
         }
     }
 }
-

@@ -3,16 +3,18 @@ import SwiftUI
 struct WardrobeSearchScreen: View {
     let onCancelTap: () -> Void
     let onItemTap: (WardrobeItem) -> Void
-    @StateObject private var viewModel = WardrobeViewModel()
+    @ObservedObject var wardrobeViewModel: WardrobeViewModel
     @State private var query = ""
     @FocusState private var isSearchFieldFocused: Bool
 
     init(
         onCancelTap: @escaping () -> Void = {},
-        onItemTap: @escaping (WardrobeItem) -> Void = { _ in }
+        onItemTap: @escaping (WardrobeItem) -> Void = { _ in },
+        wardrobeViewModel: WardrobeViewModel
     ) {
         self.onCancelTap = onCancelTap
         self.onItemTap = onItemTap
+        self.wardrobeViewModel = wardrobeViewModel
     }
 
     var body: some View {
@@ -47,7 +49,7 @@ struct WardrobeSearchScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(ArenColor.Surface.primary)
         .task {
-            await viewModel.fetchItems()
+            await wardrobeViewModel.fetchItems()
         }
     }
 
@@ -62,13 +64,13 @@ struct WardrobeSearchScreen: View {
     }
 
     private var recentlyAddedItems: [WardrobeItem] {
-        Array(viewModel.items.prefix(4))
+        Array(wardrobeViewModel.items.prefix(4))
     }
 
     private var filteredItems: [WardrobeItem] {
-        guard !trimmedQuery.isEmpty else { return viewModel.items }
+        guard !trimmedQuery.isEmpty else { return wardrobeViewModel.items }
         let normalizedQuery = trimmedQuery.uppercased()
-        return viewModel.items.filter { item in
+        return wardrobeViewModel.items.filter { item in
             [item.name, item.category ?? ""]
                 .map { $0.uppercased() }
                 .contains { $0.contains(normalizedQuery) }
@@ -85,5 +87,7 @@ struct WardrobeSearchScreen: View {
 }
 
 #Preview {
-    WardrobeSearchScreen()
+    WardrobeSearchScreen(
+        wardrobeViewModel: WardrobeViewModel()
+    )
 }
