@@ -12,19 +12,24 @@ final class SupabaseService {
     static let shared = SupabaseService()
 
     let client: SupabaseClient
+    private let configuration: SupabaseConfiguration
 
     private init() {
         do {
+            let config = try SupabaseConfiguration.load()
+            self.configuration = config
             client = try SupabaseClientFactory.makeClient()
         } catch {
             fatalError("Supabase client failed to initialise: \(error.localizedDescription)")
         }
     }
 
+    var anonKey: String {
+        configuration.anonKey
+    }
+
     // MARK: - Auth
 
-    /// Ensures an active session exists — signs in anonymously if not.
-    /// Returns true if session is active.
     func ensureAnonymousSession() async throws -> Bool {
         do {
             let session = try await client.auth.session
@@ -42,7 +47,6 @@ final class SupabaseService {
         }
     }
 
-    /// Returns current authenticated user ID, or nil if not signed in.
     func currentUserID() async -> UUID? {
         do {
             let session = try await client.auth.session
@@ -55,8 +59,6 @@ final class SupabaseService {
 
     // MARK: - Storage
 
-    /// Uploads a UIImage as PNG to the clothing-images bucket.
-    /// Returns the public URL string of the uploaded file.
     func uploadClothingImage(_ image: UIImage, itemID: UUID) async throws -> String {
         guard let pngData = image.pngData() else {
             throw SupabaseServiceError.imageEncodingFailed
@@ -81,8 +83,6 @@ final class SupabaseService {
 
     // MARK: - Database
 
-    /// Inserts a new clothing item record into clothing_items.
-    /// Returns the inserted item's UUID.
     func insertClothingItem(
         userID: UUID,
         processedImageURL: String,
@@ -118,10 +118,10 @@ private struct ClothingItemInsert: Encodable {
 
     enum CodingKeys: String, CodingKey {
         case id
-        case userID              = "user_id"
-        case processedImageURL   = "processed_image_url"
+        case userID            = "user_id"
+        case processedImageURL = "processed_image_url"
         case category
-        case processingStatus    = "processing_status"
+        case processingStatus  = "processing_status"
     }
 }
 
@@ -133,8 +133,8 @@ enum SupabaseServiceError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .imageEncodingFailed:  return "Failed to encode image as PNG."
-        case .noActiveSession:      return "No active Supabase session."
+        case .imageEncodingFailed: return "Failed to encode image as PNG."
+        case .noActiveSession:     return "No active Supabase session."
         }
     }
 }

@@ -1,3 +1,10 @@
+//
+//  HomeViewModel.swift
+//  AREN
+//
+//  Created by Ayusman Sahu on 14/04/26.
+//
+
 import Foundation
 import Combine
 import Supabase
@@ -12,13 +19,15 @@ struct DailyOutfitRow: Decodable {
     let bottomId: UUID?
     let shoesId: UUID?
     let isConfirmed: Bool
+    let reasoningText: String?
 
     enum CodingKeys: String, CodingKey {
         case id, rank
-        case topId       = "top_id"
-        case bottomId    = "bottom_id"
-        case shoesId     = "shoes_id"
-        case isConfirmed = "is_confirmed"
+        case topId        = "top_id"
+        case bottomId     = "bottom_id"
+        case shoesId      = "shoes_id"
+        case isConfirmed  = "is_confirmed"
+        case reasoningText = "reasoning_text"
     }
 }
 
@@ -38,7 +47,7 @@ enum ConfirmOutfitCTAState: Equatable {
     case `default`
     case loading
     case confirmed
-    case duplicate   // combo already logged today
+    case duplicate
     case error
 }
 
@@ -87,7 +96,6 @@ final class HomeViewModel: ObservableObject {
     @Published var bottomIndex: Int = 0
     @Published var shoesIndex: Int  = 0
 
-    // Current outfit combination rank (1-based, matches daily_outfits rank)
     @Published var currentRank: Int = 1
 
     @Published var displayCaption: String = "Your outfit for today"
@@ -95,7 +103,6 @@ final class HomeViewModel: ObservableObject {
     @Published var error: HomeError?      = nil
     @Published var isOutfitSaved: Bool    = false
 
-    // Confirmation
     @Published private(set) var isLoadingConfirmation: Bool = false
     @Published private(set) var confirmationError: Error?   = nil
 
@@ -106,14 +113,10 @@ final class HomeViewModel: ObservableObject {
     private var loadTask: Task<Void, Never>?
     private var hasLoaded    = false
 
-    // rank → outfit row UUID
-    private var outfitRowIDs: [Int: UUID] = [:]
-
-    // rank → (topId, bottomId, shoesId) combination
+    private var outfitRowIDs: [Int: UUID]                    = [:]
     private var outfitCombinations: [Int: (UUID?, UUID?, UUID?)] = [:]
-
-    // outfit_ids already confirmed today (from wear_log)
-    private var confirmedOutfitIDs: Set<UUID> = []
+    private var outfitReasoningTexts: [Int: String]          = [:]
+    private var confirmedOutfitIDs: Set<UUID>                = []
 
     // MARK: - Static Helpers
 
@@ -139,13 +142,11 @@ final class HomeViewModel: ObservableObject {
         return .default
     }
 
-    // Is the current rank's outfit row already in wear_log?
     private var isCurrentRankConfirmed: Bool {
         guard let rowID = outfitRowIDs[currentRank] else { return false }
         return confirmedOutfitIDs.contains(rowID)
     }
 
-    // Is the current top/bottom/shoes combo already logged today under a different rank?
     private var isCurrentCombinationDuplicate: Bool {
         let topId    = tops.indices.contains(topIndex)       ? tops[topIndex].id       : nil
         let bottomId = bottoms.indices.contains(bottomIndex) ? bottoms[bottomIndex].id : nil
@@ -154,9 +155,7 @@ final class HomeViewModel: ObservableObject {
         for (rank, combo) in outfitCombinations {
             guard rank != currentRank else { continue }
             guard confirmedOutfitIDs.contains(outfitRowIDs[rank] ?? UUID()) else { continue }
-            if combo.0 == topId && combo.1 == bottomId && combo.2 == shoesId {
-                return true
-            }
+            if combo.0 == topId && combo.1 == bottomId && combo.2 == shoesId { return true }
         }
         return false
     }
@@ -209,7 +208,6 @@ final class HomeViewModel: ObservableObject {
 
             let today = todayString()
 
-            // Load today's wear_log to know what's already confirmed
             await loadConfirmedOutfitIDs(userID: userID)
 
             do {
@@ -223,21 +221,30 @@ final class HomeViewModel: ObservableObject {
                     .value
 
                 if !existing.isEmpty {
-                    // Populate rank → ID and rank → combination maps
                     for row in existing {
-                        outfitRowIDs[row.rank]       = row.id
-                        outfitCombinations[row.rank] = (row.topId, row.bottomId, row.shoesId)
+                        outfitRowIDs[row.rank]        = row.id
+                        outfitCombinations[row.rank]  = (row.topId, row.bottomId, row.shoesId)
+                        if let text = row.reasoningText {
+                            outfitReasoningTexts[row.rank] = text
+                        }
                     }
 
-                    // Set visible outfit to rank 1
                     if let first = existing.first {
                         topIndex    = tops.firstIndex(where: { $0.id == first.topId })       ?? firstAvailableIndex(in: tops)
                         bottomIndex = bottoms.firstIndex(where: { $0.id == first.bottomId }) ?? firstAvailableIndex(in: bottoms)
                         shoesIndex  = shoes.firstIndex(where: { $0.id == first.shoesId })    ?? firstAvailableIndex(in: shoes)
                         currentRank = 1
                     }
+
+                    // Set caption from stored reasoning or trigger generation if missing
+                    updateCaption(for: 1)
+
                 } else {
                     try await generateAndPersist(userID: userID, date: today)
+                    // Trigger reasoning for rank 1 after fresh generation
+                    if let outfitId = outfitRowIDs[1] {
+                        Task { await generateReasoning(outfitId: outfitId, rank: 1) }
+                    }
                 }
             } catch {
                 applyLocalOutfitSelectionFallback()
@@ -257,7 +264,51 @@ final class HomeViewModel: ObservableObject {
         isLoading = false
     }
 
-    // MARK: - Load Confirmed Outfit IDs from wear_log
+    // MARK: - Caption
+
+    private func updateCaption(for rank: Int) {
+        if let stored = outfitReasoningTexts[rank] {
+            displayCaption = stored
+        } else {
+            displayCaption = "Your outfit for today"
+            if let outfitId = outfitRowIDs[rank] {
+                Task { await generateReasoning(outfitId: outfitId, rank: rank) }
+            }
+        }
+    }
+
+    // MARK: - Generate Reasoning via Edge Function
+
+    private func generateReasoning(outfitId: UUID, rank: Int) async {
+        guard let url = URL(string: "https://gtfysakpjifzypytxguw.supabase.co/functions/v1/generate-reasoning") else { return }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \((try? SupabaseConfiguration.load())?.anonKey ?? "")", forHTTPHeaderField: "Authorization")
+        let body = ["outfit_id": outfitId.uuidString]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let rawString = String(data: data, encoding: .utf8) ?? "nil"
+            print("📦 Edge Function response: \(rawString)")
+
+            if let http = response as? HTTPURLResponse, http.statusCode != 200 {
+                print("❌ HTTP \(http.statusCode)")
+                return
+            }
+
+            struct ReasoningResponse: Decodable { let reasoning: String }
+            let decoded = try JSONDecoder().decode(ReasoningResponse.self, from: data)
+            outfitReasoningTexts[rank] = decoded.reasoning
+            if currentRank == rank { displayCaption = decoded.reasoning }
+
+        } catch {
+            print("❌ generateReasoning error: \(error)")
+        }
+    }
+
+    // MARK: - Load Confirmed Outfit IDs
 
     private func loadConfirmedOutfitIDs(userID: UUID) async {
         let todayStart = todayString() + "T00:00:00+00:00"
@@ -276,7 +327,7 @@ final class HomeViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Switch Rank (call this when user swipes between combinations)
+    // MARK: - Switch Rank
 
     func switchToRank(_ rank: Int) {
         guard outfitRowIDs[rank] != nil else { return }
@@ -287,6 +338,8 @@ final class HomeViewModel: ObservableObject {
             bottomIndex = bottoms.firstIndex(where: { $0.id == combo.1 }) ?? firstAvailableIndex(in: bottoms)
             shoesIndex  = shoes.firstIndex(where: { $0.id == combo.2 })   ?? firstAvailableIndex(in: shoes)
         }
+
+        updateCaption(for: rank)
     }
 
     // MARK: - Fetch
@@ -398,7 +451,7 @@ final class HomeViewModel: ObservableObject {
 
     func confirmOutfit() async {
         guard !isLoadingConfirmation else { return }
-        guard confirmCTAState == .default else { return } // block if already confirmed or duplicate
+        guard confirmCTAState == .default else { return }
 
         isLoadingConfirmation = true
         confirmationError     = nil

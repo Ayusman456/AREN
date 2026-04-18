@@ -2,13 +2,15 @@
 //  DailyOutfit.swift
 //  AREN
 //
-//  Created by Ayusman sahu on 14/04/26.
-//
+
+import Foundation
 
 struct DailyOutfit {
+    let id: UUID
     let top: WardrobeItem?
     let bottom: WardrobeItem?
     let shoes: WardrobeItem?
+    let reasoningText: String?
 
     var isEmpty: Bool {
         top == nil && bottom == nil && shoes == nil

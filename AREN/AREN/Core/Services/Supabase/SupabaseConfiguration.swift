@@ -54,7 +54,6 @@ enum SupabaseConfigurationError: LocalizedError {
         }
     }
 }
-
 #if canImport(Supabase)
 enum SupabaseClientFactory {
     static func makeClient(bundle: Bundle = .main) throws -> SupabaseClient {
@@ -62,7 +61,12 @@ enum SupabaseClientFactory {
 
         return SupabaseClient(
             supabaseURL: configuration.url,
-            supabaseKey: configuration.anonKey
+            supabaseKey: configuration.anonKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
         )
     }
 }

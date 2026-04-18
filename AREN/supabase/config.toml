@@ -1,0 +1,2 @@
+ [functions.generate-reasoning]
+ verify_jwt = false

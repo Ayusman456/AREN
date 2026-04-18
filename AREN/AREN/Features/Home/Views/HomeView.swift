@@ -22,7 +22,6 @@ struct HomeView: View {
                 dateText: "SAT 21",
                 titleText: "CLIENT LUNCH",
                 timeText: "1:00 PM",
-                overflowCount: 2,
                 onOverflowTap: {
                     router.present(sheet: .dayDetail(date: .now, events: demoEvents))
                 }
@@ -30,12 +29,12 @@ struct HomeView: View {
 
             if homeViewModel.isLoading {
                 loadingSkeleton
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             } else {
                 outfitCanvas
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 confirmOutfitCTA
             }
-
-            Spacer(minLength: 0)
         }
         .background(ArenColor.Surface.primary)
         .task {

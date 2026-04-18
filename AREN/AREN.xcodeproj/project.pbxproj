@@ -29,6 +29,11 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		F93814902F93A4F000A6D03D /* supabase */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = supabase;
+			sourceTree = "<group>";
+		};
 		F96D44BD2F606F5600C419C5 /* AREN */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -58,6 +63,7 @@
 		F96D44B22F606F5600C419C5 = {
 			isa = PBXGroup;
 			children = (
+				F93814902F93A4F000A6D03D /* supabase */,
 				F96D44BD2F606F5600C419C5 /* AREN */,
 				F96D44BC2F606F5600C419C5 /* Products */,
 			);
@@ -87,6 +93,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				F93814902F93A4F000A6D03D /* supabase */,
 				F96D44BD2F606F5600C419C5 /* AREN */,
 			);
 			name = AREN;

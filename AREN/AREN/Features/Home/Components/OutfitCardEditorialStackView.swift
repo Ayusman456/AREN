@@ -96,7 +96,7 @@ struct OutfitCardEditorialStackView: View {
             .font(captionFont)
             .foregroundStyle(ArenColor.Text.secondary)
             .multilineTextAlignment(.center)
-            .lineLimit(2)
+            .lineLimit(1)
             .padding(.top, 16)
             .padding(.horizontal, 16)
             .debugBorder(if: showDebugBorders, color: .yellow)
