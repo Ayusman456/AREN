@@ -3,7 +3,7 @@ import Kingfisher
 
 struct WardrobeScreen: View {
     #if DEBUG
-    private let showDebugBorders = true
+    private let showDebugBorders = false
     #else
     private let showDebugBorders = false
     #endif

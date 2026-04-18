@@ -181,11 +181,13 @@ private struct ConfirmOutfitCTAView: View {
                 case .default:
                     ctaLabel("WEARING THIS TODAY")
                 case .loading:
-                    ConfirmOutfitSpinner()
+                    ctaLabel("SAVING...")
                 case .error:
                     ctaLabel("TRY AGAIN")
                 case .confirmed:
                     ctaLabel("WORN TODAY")
+                case .duplicate:
+                    ctaLabel("ALREADY LOGGED")
                 }
             }
             .frame(width: 362, height: 32)
@@ -197,7 +199,7 @@ private struct ConfirmOutfitCTAView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(state == .loading || state == .confirmed)
+        .disabled(state == .loading || state == .confirmed || state == .duplicate)
         .accessibilityLabel(accessibilityLabel)
     }
 
@@ -218,6 +220,7 @@ private struct ConfirmOutfitCTAView: View {
         case .loading:   return "Confirming outfit"
         case .error:     return "Try again"
         case .confirmed: return "Outfit confirmed"
+        case .duplicate: return "Already logged today"
         }
     }
 
