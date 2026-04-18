@@ -134,6 +134,9 @@ private struct SwipableGarmentRow: View {
         if items.isEmpty {
             Color(ArenColor.Surface.secondary)
                 .frame(width: width, height: height)
+        } else if !items.indices.contains(currentIndex) {
+            Color(ArenColor.Surface.secondary)
+                .frame(width: width, height: height)
         } else {
             ZStack(alignment: .topLeading) {
                 garmentImage(items[currentIndex])
