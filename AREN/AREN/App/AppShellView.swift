@@ -12,11 +12,7 @@ struct AppShellView: View {
     @State private var isAddingEventFromDayDetail = false
     @State private var showAddItemSource = false
     @State private var isUploading = false
-    @State private var wardrobeSelectedFilterValues: [String: String] = [
-        "01-sort by": "Recently added",
-        "02-status": "All",
-        "03-occasion": "All",
-    ]
+  
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -51,9 +47,18 @@ struct AppShellView: View {
                     .onTapGesture { isPresentingWardrobeFilters = false }
 
                 WardrobeFilterPanelView(
-                    selectedValues: wardrobeSelectedFilterValues,
+                    sections: wardrobeViewModel.activeTab == .items
+                        ? WardrobeFilterPanelView.itemsSections
+                        : WardrobeFilterPanelView.outfitsSections,
+                    selectedValues: wardrobeViewModel.activeTab == .items
+                        ? wardrobeViewModel.itemFilters
+                        : wardrobeViewModel.outfitFilters,
                     onSelectOption: { sectionID, option in
-                        wardrobeSelectedFilterValues[sectionID] = option
+                        if wardrobeViewModel.activeTab == .items {
+                            wardrobeViewModel.itemFilters[sectionID] = option
+                        } else {
+                            wardrobeViewModel.outfitFilters[sectionID] = option
+                        }
                     },
                     onViewResults: { isPresentingWardrobeFilters = false }
                 )

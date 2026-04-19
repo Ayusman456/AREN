@@ -14,7 +14,7 @@ struct WardrobeScreen: View {
 
     @ObservedObject var viewModel: WardrobeViewModel
     @State private var selectedCategory = "All"
-    @State private var selectedTab: WardrobeTab = .items
+   
 
     private let columns = [
         GridItem(.fixed(171), spacing: 20),
@@ -45,25 +45,25 @@ struct WardrobeScreen: View {
             .debugBorder(if: showDebugBorders, color: .orange)
 
             WardrobeTabToggleView(
-                selectedTab: $selectedTab,
-                itemCount: viewModel.items.count,
-                outfitCount: viewModel.outfits.count
+                selectedTab: $viewModel.activeTab,
+                itemCount: viewModel.filteredItems.count,
+                outfitCount: viewModel.filteredOutfits.count
             )
-            .onChange(of: selectedTab) {
+            .onChange(of: viewModel.activeTab) {
                 selectedCategory = "All"
             }
             .debugBorder(if: showDebugBorders, color: .blue)
 
             WardrobeCategoryFilterStripView(
                 selectedCategory: selectedCategory,
-                tab: selectedTab
+                tab: viewModel.activeTab
             ) { category in
                 selectedCategory = category
             }
             .debugBorder(if: showDebugBorders, color: .green)
 
             ScrollView(.vertical, showsIndicators: false) {
-                if selectedTab == .items {
+                if viewModel.activeTab == .items {
                     itemsGrid
                 } else {
                     outfitsGrid
@@ -74,6 +74,7 @@ struct WardrobeScreen: View {
         .background(ArenColor.Surface.primary)
         .task {
             await viewModel.fetchItems()
+            await viewModel.fetchOutfits()
         }
         .debugBorder(if: showDebugBorders, color: .red)
     }
@@ -82,7 +83,7 @@ struct WardrobeScreen: View {
 
     private var itemsGrid: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 32) {
-            ForEach(filteredItems) { item in
+            ForEach(categoryFilteredItems) { item in
                 WardrobeItemCell(item: item)
                     .debugBorder(if: showDebugBorders, color: .pink)
             }
@@ -95,7 +96,7 @@ struct WardrobeScreen: View {
 
     private var outfitsGrid: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 32) {
-            ForEach(viewModel.outfits) { outfit in
+            ForEach(viewModel.filteredOutfits) { outfit in
                 Group {
                     // wire WardrobeOutfitCell here once model is updated
                 }
@@ -105,13 +106,13 @@ struct WardrobeScreen: View {
         .debugBorder(if: showDebugBorders, color: .mint)
     }
 
-    // MARK: - Filtered Items
+    // MARK: - Category Filter (applied on top of ViewModel filter)
 
-    private var filteredItems: [WardrobeItem] {
+    private var categoryFilteredItems: [WardrobeItem] {
         guard selectedCategory.caseInsensitiveCompare("all") != .orderedSame else {
-            return viewModel.items
+            return viewModel.filteredItems
         }
-        return viewModel.items.filter {
+        return viewModel.filteredItems.filter {
             ($0.category ?? "").caseInsensitiveCompare(selectedCategory) == .orderedSame
         }
     }

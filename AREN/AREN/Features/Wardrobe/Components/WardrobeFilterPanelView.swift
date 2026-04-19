@@ -4,8 +4,6 @@ import UIKit
 struct WardrobeFilterPanelView: View {
 
     // MARK: - Debug Toggle
-    // true  → borders on for this component only
-    // false → follows ArenDebug.isDebug
     private static let debug = false
 
     // MARK: - Layout
@@ -50,7 +48,7 @@ struct WardrobeFilterPanelView: View {
     // MARK: - Init
 
     init(
-        sections: [Section] = Self.defaultSections,
+        sections: [Section] = Self.itemsSections,
         selectedValues: [String: String] = [:],
         onSelectOption: @escaping (String, String) -> Void = { _, _ in },
         onViewResults: @escaping () -> Void = {}
@@ -144,7 +142,7 @@ struct WardrobeFilterPanelView: View {
 
         return Button(action: { onSelectOption(section.id, option) }) {
             Text(option.uppercased())
-                .font(Self.optionFont)
+                .font(isSelected ? Self.optionFontSelected : Self.optionFont)
                 .foregroundStyle(ArenColor.Text.primary)
                 .frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
                 .padding(.vertical, 8)
@@ -158,9 +156,12 @@ struct WardrobeFilterPanelView: View {
     // MARK: - Footer CTA
 
     private var footerCTA: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let activeCount = selectedValues.values.filter { $0 != "All" }.count
+        let label = activeCount > 0 ? "VIEW RESULTS (\(activeCount))" : "VIEW RESULTS"
+
+        return VStack(alignment: .leading, spacing: 0) {
             Button(action: onViewResults) {
-                Text("VIEW RESULTS")
+                Text(label)
                     .font(Self.optionFont)
                     .foregroundStyle(ArenColor.Text.primary)
                     .frame(maxWidth: .infinity, minHeight: 16)
@@ -181,12 +182,17 @@ struct WardrobeFilterPanelView: View {
         .debugBorder(.yellow, enabled: Self.debug)
     }
 
-    // MARK: - Defaults
+    // MARK: - Section Sets
 
-    private static let defaultSections: [Section] = [
-        Section(number: "01", title: "Sort By", options: ["Recently added", "A–Z", "Brand"]),
-        Section(number: "02", title: "Status",  options: ["All", "Worn", "Unworn"]),
+    static let itemsSections: [Section] = [
+        Section(number: "01", title: "Sort By",  options: ["Recently added", "A–Z", "Brand"]),
+        Section(number: "02", title: "Status",   options: ["All", "Worn", "Unworn"]),
         Section(number: "03", title: "Occasion", options: ["All", "Work", "Evening"]),
+    ]
+
+    static let outfitsSections: [Section] = [
+        Section(number: "01", title: "Sort By",  options: ["Recently saved", "Date"]),
+        Section(number: "02", title: "Occasion", options: ["All", "Work", "Evening"]),
     ]
 
     // MARK: - Fonts
@@ -214,16 +220,40 @@ struct WardrobeFilterPanelView: View {
         }
         return .system(size: 13, weight: .light)
     }
+
+    private static var optionFontSelected: Font {
+        let candidates = [
+            "HelveticaNowText-Medium",
+            "HelveticaNowText Medium",
+            "HelveticaNowText-Regular",
+        ]
+        for name in candidates where UIFont(name: name, size: 13) != nil {
+            return .custom(name, size: 13)
+        }
+        return .system(size: 13, weight: .medium)
+    }
 }
 
 // MARK: - Preview
 
-#Preview {
+#Preview("Items Filter") {
     WardrobeFilterPanelView(
+        sections: WardrobeFilterPanelView.itemsSections,
         selectedValues: [
             "01-sort by": "Recently added",
-            "02-status": "All",
-            "03-occasion": "All",
+            "02-status": "Worn",
+            "03-occasion": "Work",
+        ]
+    )
+    .background(Color.gray.opacity(0.1))
+}
+
+#Preview("Outfits Filter") {
+    WardrobeFilterPanelView(
+        sections: WardrobeFilterPanelView.outfitsSections,
+        selectedValues: [
+            "01-sort by": "Recently saved",
+            "02-occasion": "All",
         ]
     )
     .background(Color.gray.opacity(0.1))
