@@ -1,3 +1,8 @@
+//
+//  WardrobeScreen.swift
+//  AREN
+//
+
 import SwiftUI
 import Kingfisher
 
@@ -14,7 +19,6 @@ struct WardrobeScreen: View {
 
     @ObservedObject var viewModel: WardrobeViewModel
     @State private var selectedCategory = "All"
-   
 
     private let columns = [
         GridItem(.fixed(171), spacing: 20),
@@ -97,9 +101,8 @@ struct WardrobeScreen: View {
     private var outfitsGrid: some View {
         LazyVGrid(columns: columns, alignment: .leading, spacing: 32) {
             ForEach(viewModel.filteredOutfits) { outfit in
-                Group {
-                    // wire WardrobeOutfitCell here once model is updated
-                }
+                WardrobeOutfitCell(outfit: outfit, onTap: {})
+                    .debugBorder(if: showDebugBorders, color: .pink)
             }
         }
         .padding(.horizontal, 20)

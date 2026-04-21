@@ -1,3 +1,8 @@
+//
+//  WardrobeViewModel.swift
+//  AREN
+//
+
 import Foundation
 import Supabase
 import Combine
@@ -8,20 +13,19 @@ final class WardrobeViewModel: ObservableObject {
     // MARK: - Published State
 
     @Published var items: [WardrobeItem] = []
-    @Published var outfits: [WardrobeOutfit] = []
+    @Published var outfits: [DailyOutfit] = []
     @Published var isLoading: Bool = false
     @Published var error: String? = nil
     @Published var wornCounts: [UUID: Int] = [:]
     @Published var itemFilters: [String: String] = [:]
     @Published var outfitFilters: [String: String] = [:]
-    // Add to WardrobeViewModel
     @Published var activeTab: WardrobeTab = .items
 
     // MARK: - Private
 
     private let client = SupabaseService.shared.client
 
-    // MARK: - Fetch
+    // MARK: - Fetch Items
 
     func fetchItems() async {
         isLoading = true
@@ -36,7 +40,6 @@ final class WardrobeViewModel: ObservableObject {
                 .value
 
             items = response
-         //   print("occasions:", response.map { $0.occasion ?? "nil" }) debugging print
             await loadWornCounts()
         } catch {
             self.error = error.localizedDescription
@@ -45,19 +48,44 @@ final class WardrobeViewModel: ObservableObject {
         isLoading = false
     }
 
+    // MARK: - Fetch Outfits
+
     func fetchOutfits() async {
+        guard !items.isEmpty else { return }
+
         isLoading = true
         error = nil
 
         do {
-            let response: [WardrobeOutfit] = try await client
+            let rows: [DailyOutfitRow] = try await client
                 .from("daily_outfits")
                 .select()
                 .order("created_at", ascending: false)
                 .execute()
                 .value
 
-            outfits = response
+            let itemLookup: [UUID: WardrobeItem] = Dictionary(
+                uniqueKeysWithValues: items.map { ($0.id, $0) }
+            )
+
+            let dateParser = ISO8601DateFormatter()
+            dateParser.formatOptions = [.withFullDate, .withDashSeparatorInDate]
+
+            let fallbackDate = Date()
+
+            outfits = rows.map { row in
+                let parsedDate: Date = dateParser.date(from: row.date) ?? fallbackDate
+
+                return DailyOutfit(
+                    id: row.id,
+                    date: parsedDate,
+                    occasion: row.occasion,
+                    top: row.topId.flatMap { itemLookup[$0] },
+                    bottom: row.bottomId.flatMap { itemLookup[$0] },
+                    shoes: row.shoesId.flatMap { itemLookup[$0] },
+                    reasoningText: row.reasoningText
+                )
+            }
         } catch {
             self.error = error.localizedDescription
         }
@@ -83,7 +111,6 @@ final class WardrobeViewModel: ObservableObject {
             }
             wornCounts = counts
         } catch {
-            // Non-fatal — worn counts default to empty, Status filter treats all as unworn
             wornCounts = [:]
         }
     }
@@ -91,22 +118,19 @@ final class WardrobeViewModel: ObservableObject {
     // MARK: - Filtered Items
 
     var filteredItems: [WardrobeItem] {
-        //    print("filteredItems — occasion filter:", itemFilters["03-occasion"] ?? "none") // debugging print
-            var result = items
+        var result = items
 
-        // Sort
         if let sort = itemFilters["01-sort by"] {
             switch sort {
             case "A–Z":
-                result = result.sorted { ($0.name) < ($1.name) }
+                result = result.sorted { $0.name < $1.name }
             case "Brand":
                 result = result.sorted { ($0.brand ?? "") < ($1.brand ?? "") }
             default:
-                break // "Recently added" — preserve fetch order
+                break
             }
         }
 
-        // Status
         if let status = itemFilters["02-status"], status != "All" {
             switch status {
             case "Worn":   result = result.filter { (wornCounts[$0.id] ?? 0) > 0 }
@@ -115,7 +139,6 @@ final class WardrobeViewModel: ObservableObject {
             }
         }
 
-        // Occasion
         if let occasion = itemFilters["03-occasion"], occasion != "All" {
             result = result.filter {
                 $0.occasion?.caseInsensitiveCompare(occasion) == .orderedSame
@@ -127,20 +150,18 @@ final class WardrobeViewModel: ObservableObject {
 
     // MARK: - Filtered Outfits
 
-    var filteredOutfits: [WardrobeOutfit] {
+    var filteredOutfits: [DailyOutfit] {
         var result = outfits
 
-        // Sort
         if let sort = outfitFilters["01-sort by"] {
             switch sort {
             case "Date":
-                result = result.sorted { $0.id.uuidString < $1.id.uuidString }
+                result = result.sorted { $0.date > $1.date }
             default:
-                break // "Recently saved" — preserve fetch order
+                break
             }
         }
 
-        // Occasion
         if let occasion = outfitFilters["02-occasion"], occasion != "All" {
             result = result.filter {
                 $0.occasion?.caseInsensitiveCompare(occasion) == .orderedSame

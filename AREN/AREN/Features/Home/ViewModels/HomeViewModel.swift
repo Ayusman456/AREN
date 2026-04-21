@@ -20,14 +20,18 @@ struct DailyOutfitRow: Decodable {
     let shoesId: UUID?
     let isConfirmed: Bool
     let reasoningText: String?
+    let date: String
+    let occasion: String?
 
     enum CodingKeys: String, CodingKey {
         case id, rank
-        case topId        = "top_id"
-        case bottomId     = "bottom_id"
-        case shoesId      = "shoes_id"
-        case isConfirmed  = "is_confirmed"
+        case topId         = "top_id"
+        case bottomId      = "bottom_id"
+        case shoesId       = "shoes_id"
+        case isConfirmed   = "is_confirmed"
         case reasoningText = "reasoning_text"
+        case date
+        case occasion
     }
 }
 
@@ -113,10 +117,12 @@ final class HomeViewModel: ObservableObject {
     private var loadTask: Task<Void, Never>?
     private var hasLoaded    = false
 
-    private var outfitRowIDs: [Int: UUID]                    = [:]
+    private var outfitRowIDs: [Int: UUID]                        = [:]
     private var outfitCombinations: [Int: (UUID?, UUID?, UUID?)] = [:]
-    private var outfitReasoningTexts: [Int: String]          = [:]
-    private var confirmedOutfitIDs: Set<UUID>                = []
+    private var outfitReasoningTexts: [Int: String]              = [:]
+    private var outfitDates: [Int: String]                       = [:]
+    private var outfitOccasions: [Int: String?]                  = [:]
+    private var confirmedOutfitIDs: Set<UUID>                    = []
 
     // MARK: - Static Helpers
 
@@ -222,8 +228,10 @@ final class HomeViewModel: ObservableObject {
 
                 if !existing.isEmpty {
                     for row in existing {
-                        outfitRowIDs[row.rank]        = row.id
-                        outfitCombinations[row.rank]  = (row.topId, row.bottomId, row.shoesId)
+                        outfitRowIDs[row.rank]       = row.id
+                        outfitCombinations[row.rank] = (row.topId, row.bottomId, row.shoesId)
+                        outfitDates[row.rank]        = row.date
+                        outfitOccasions[row.rank]    = row.occasion
                         if let text = row.reasoningText {
                             outfitReasoningTexts[row.rank] = text
                         }
@@ -236,12 +244,10 @@ final class HomeViewModel: ObservableObject {
                         currentRank = 1
                     }
 
-                    // Set caption from stored reasoning or trigger generation if missing
                     updateCaption(for: 1)
 
                 } else {
                     try await generateAndPersist(userID: userID, date: today)
-                    // Trigger reasoning for rank 1 after fresh generation
                     if let outfitId = outfitRowIDs[1] {
                         Task { await generateReasoning(outfitId: outfitId, rank: 1) }
                     }
@@ -423,6 +429,8 @@ final class HomeViewModel: ObservableObject {
 
             outfitRowIDs[rank]       = rowID
             outfitCombinations[rank] = (topId, botId, shoId)
+            outfitDates[rank]        = date
+            outfitOccasions[rank]    = nil
 
             let row: [String: AnyJSON] = [
                 "id":           .string(rowID.uuidString),
