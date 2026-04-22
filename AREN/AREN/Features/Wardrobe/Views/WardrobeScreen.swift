@@ -1,17 +1,7 @@
-//
-//  WardrobeScreen.swift
-//  AREN
-//
-
 import SwiftUI
 import Kingfisher
 
 struct WardrobeScreen: View {
-    #if DEBUG
-    private let showDebugBorders = false
-    #else
-    private let showDebugBorders = false
-    #endif
 
     let onFiltersTap: () -> Void
     let onSearchTap: () -> Void
@@ -20,96 +10,139 @@ struct WardrobeScreen: View {
     @ObservedObject var viewModel: WardrobeViewModel
     @State private var selectedCategory = "All"
 
+    // MARK: - Scroll State
+    // ✅ FIX 1 — Removed unused scrollOffset state
+    @State private var isScrolling: Bool = false
+    @State private var showControls: Bool = true
+
     private let columns = [
-        GridItem(.fixed(171), spacing: 20),
-        GridItem(.fixed(171), spacing: 20)
+        GridItem(.flexible(), spacing: 20),
+        GridItem(.flexible(), spacing: 20)
     ]
 
-    init(
-        viewModel: WardrobeViewModel,
-        onFiltersTap: @escaping () -> Void = {},
-        onSearchTap: @escaping () -> Void = {},
-        onAddTap: @escaping () -> Void = {}
-    ) {
-        self.viewModel = viewModel
-        self.onFiltersTap = onFiltersTap
-        self.onSearchTap = onSearchTap
-        self.onAddTap = onAddTap
-    }
-
     var body: some View {
-        VStack(spacing: 0) {
-            WardrobeTopNavView(
-                mode: .filtersSearchAdd,
-                showsBackButton: false,
-                onFiltersTap: onFiltersTap,
-                onSearchTap: onSearchTap,
-                onAddTap: onAddTap
-            )
-            .debugBorder(if: showDebugBorders, color: .orange)
+        ZStack(alignment: .top) {
 
-            WardrobeTabToggleView(
-                selectedTab: $viewModel.activeTab,
-                itemCount: viewModel.filteredItems.count,
-                outfitCount: viewModel.filteredOutfits.count
-            )
-            .onChange(of: viewModel.activeTab) {
-                selectedCategory = "All"
-            }
-            .debugBorder(if: showDebugBorders, color: .blue)
-
-            WardrobeCategoryFilterStripView(
-                selectedCategory: selectedCategory,
-                tab: viewModel.activeTab
-            ) { category in
-                selectedCategory = category
-            }
-            .debugBorder(if: showDebugBorders, color: .green)
-
+            // MARK: - Scroll Content
             ScrollView(.vertical, showsIndicators: false) {
-                if viewModel.activeTab == .items {
-                    itemsGrid
-                } else {
-                    outfitsGrid
+                VStack(spacing: 0) {
+
+                    // Top spacing for overlay
+                    Color.clear.frame(height: 140)
+
+                    if viewModel.activeTab == .items {
+                        itemsGrid
+                    } else {
+                        outfitsGrid
+                    }
+
+                    Color.clear.frame(height: 100)
                 }
             }
-            .debugBorder(if: showDebugBorders, color: .purple)
+            // ✅ FIX 1 — onScrollGeometryChange removed entirely (scrollOffset was unused)
+            .onScrollPhaseChange { _, phase in
+                // ✅ FIX 2 — Handle decelerating + animating phases
+                switch phase {
+                case .tracking, .interacting, .decelerating, .animating:
+                    isScrolling = true
+                    hideControls()
+
+                case .idle:
+                    isScrolling = false
+                    showControlsWithDelay()
+
+                default:
+                    break
+                }
+            }
+
+            // MARK: - Floating Controls
+            VStack(spacing: 0) {
+
+                // Top Nav
+                WardrobeTopNavView(
+                    mode: .filtersSearchAdd,
+                    showsBackButton: false,
+                    isTransparent: !showControls,
+                    onFiltersTap: onFiltersTap,
+                    onSearchTap: onSearchTap,
+                    onAddTap: onAddTap
+                )
+
+                // Tabs
+                // ✅ FIX 4 — Reduced offset from -20 to -8 to prevent clipping under nav
+                WardrobeTabToggleView(
+                    selectedTab: $viewModel.activeTab,
+                    itemCount: viewModel.filteredItems.count,
+                    outfitCount: viewModel.filteredOutfits.count
+                )
+                .opacity(showControls ? 1 : 0)
+                .offset(y: showControls ? 0 : -8)
+                .animation(.easeInOut(duration: 0.2), value: showControls)
+
+                // Category Strip
+                // ✅ FIX 4 — Reduced offset from -20 to -8 to prevent clipping under nav
+                WardrobeCategoryFilterStripView(
+                    selectedCategory: selectedCategory,
+                    tab: viewModel.activeTab
+                ) { category in
+                    selectedCategory = category
+                }
+                .opacity(showControls ? 1 : 0)
+                .offset(y: showControls ? 0 : -8)
+                .animation(.easeInOut(duration: 0.2), value: showControls)
+            }
         }
         .background(ArenColor.Surface.primary)
+        .onChange(of: viewModel.activeTab) {
+            selectedCategory = "All"
+        }
         .task {
             await viewModel.fetchItems()
             await viewModel.fetchOutfits()
         }
-        .debugBorder(if: showDebugBorders, color: .red)
     }
 
-    // MARK: - Items Grid
+    // MARK: - Animations
+
+    private func hideControls() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showControls = false
+        }
+    }
+
+    // ✅ FIX 3 — Delay reduced from 0.7s to 0.15s for snappy restore on scroll up
+    private func showControlsWithDelay() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            if !isScrolling {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showControls = true
+                }
+            }
+        }
+    }
+
+    // MARK: - Grids
 
     private var itemsGrid: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 32) {
+        LazyVGrid(columns: columns, spacing: 32) {
             ForEach(categoryFilteredItems) { item in
                 WardrobeItemCell(item: item)
-                    .debugBorder(if: showDebugBorders, color: .pink)
             }
         }
         .padding(.horizontal, 20)
-        .debugBorder(if: showDebugBorders, color: .cyan)
     }
-
-    // MARK: - Outfits Grid
 
     private var outfitsGrid: some View {
-        LazyVGrid(columns: columns, alignment: .leading, spacing: 32) {
+        LazyVGrid(columns: columns, spacing: 32) {
             ForEach(viewModel.filteredOutfits) { outfit in
                 WardrobeOutfitCell(outfit: outfit, onTap: {})
-                    .debugBorder(if: showDebugBorders, color: .pink)
             }
         }
         .padding(.horizontal, 20)
-        .debugBorder(if: showDebugBorders, color: .mint)
     }
 
-    // MARK: - Category Filter (applied on top of ViewModel filter)
+    // MARK: - Filtering
 
     private var categoryFilteredItems: [WardrobeItem] {
         guard selectedCategory.caseInsensitiveCompare("all") != .orderedSame else {
@@ -119,8 +152,4 @@ struct WardrobeScreen: View {
             ($0.category ?? "").caseInsensitiveCompare(selectedCategory) == .orderedSame
         }
     }
-}
-
-#Preview {
-    WardrobeScreen(viewModel: WardrobeViewModel())
 }

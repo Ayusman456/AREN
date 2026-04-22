@@ -16,10 +16,10 @@ struct WardrobeOutfitCell: View {
     private enum Layout {
         static let cardWidth: CGFloat       = 171
         static let imageHeight: CGFloat     = 257         // total canvas height
-        static let topZoneHeight: CGFloat   = 80          // shirt/jacket — shorter garment
-        static let bottomZoneHeight: CGFloat = 120        // trousers/skirt — tallest zone
-        static let shoesZoneHeight: CGFloat  = 57         // shoes — compact, naturally small
-        static let innerPadding: CGFloat    = 16          // breathing room inside each zone
+        static let topZoneHeight: CGFloat   = 85        // shirt/jacket — shorter garment
+        static let bottomZoneHeight: CGFloat = 124      // trousers/skirt — tallest zone
+        static let shoesZoneHeight: CGFloat  = 45       // shoes — compact, naturally small
+        static let innerPadding: CGFloat    = 8         // breathing room inside each zone
         static let metaHorizontal: CGFloat  = 8
         static let metaBottom: CGFloat      = 12
         static let metaTopPadding: CGFloat  = 6
@@ -33,7 +33,7 @@ struct WardrobeOutfitCell: View {
     // MARK: - Debug
 
     #if DEBUG
-    private let showDebugBorders = true
+    private let showDebugBorders = false
     #else
     private let showDebugBorders = false
     #endif
@@ -71,7 +71,7 @@ struct WardrobeOutfitCell: View {
                 .if(showDebugBorders) { $0.border(Color.orange, width: 1) }
         }
         .frame(width: Layout.cardWidth, height: Layout.imageHeight)
-        .background(Color(hex: "#F5F5F5"))
+        .background(Color(hex: "#FFFFFF"))
     }
 
     @ViewBuilder

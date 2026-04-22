@@ -115,10 +115,10 @@ struct NavigationContainer: View {
                 .environmentObject(router)
         case .wardrobe:
             WardrobeScreen(
-                viewModel: wardrobeViewModel,
                 onFiltersTap: { router.present(sheet: .wardrobeFilters) },
                 onSearchTap: { router.navigate(to: .wardrobeSearch) },
-                onAddTap: { showAddItemSource = true }
+                onAddTap: { showAddItemSource = true },
+                viewModel: wardrobeViewModel
             )
         case .events:
             PlaceholderSectionView(title: "Events")
