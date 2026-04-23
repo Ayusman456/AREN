@@ -9,7 +9,8 @@ struct WardrobeTopNavView: View {
 
     let mode: Mode
     let showsBackButton: Bool
-    let isTransparent: Bool
+    // ✅ FIX 3 — Changed from Bool to Double to support mid-opacity states (0.85)
+    let backgroundOpacity: Double
 
     let onBackTap: () -> Void
     let onFiltersTap: () -> Void
@@ -19,7 +20,7 @@ struct WardrobeTopNavView: View {
     init(
         mode: Mode = .filtersSearchAdd,
         showsBackButton: Bool = true,
-        isTransparent: Bool = false,
+        backgroundOpacity: Double = 1.0,
         onBackTap: @escaping () -> Void = {},
         onFiltersTap: @escaping () -> Void = {},
         onSearchTap: @escaping () -> Void = {},
@@ -27,7 +28,7 @@ struct WardrobeTopNavView: View {
     ) {
         self.mode = mode
         self.showsBackButton = showsBackButton
-        self.isTransparent = isTransparent
+        self.backgroundOpacity = backgroundOpacity
         self.onBackTap = onBackTap
         self.onFiltersTap = onFiltersTap
         self.onSearchTap = onSearchTap
@@ -66,11 +67,11 @@ struct WardrobeTopNavView: View {
         .background(navBackground)
     }
 
-    // ✅ FIX 5 — Animate opacity on single view instead of switching between two Color values
+    // ✅ FIX 3 — Single view with opacity driven by Double, animates correctly at all values
     private var navBackground: some View {
         ArenColor.Surface.primary
-            .opacity(isTransparent ? 0 : 1)
-            .animation(.easeInOut(duration: 0.2), value: isTransparent)
+            .opacity(backgroundOpacity)
+            .animation(.easeInOut(duration: 0.2), value: backgroundOpacity)
     }
 
     private var backContainer: some View {

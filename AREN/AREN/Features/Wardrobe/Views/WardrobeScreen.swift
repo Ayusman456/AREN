@@ -11,14 +11,51 @@ struct WardrobeScreen: View {
     @State private var selectedCategory = "All"
 
     // MARK: - Scroll State
-    // ✅ FIX 1 — Removed unused scrollOffset state
+    @State private var scrollOffset: CGFloat = 0
+    @State private var lastScrollOffset: CGFloat = 0
     @State private var isScrolling: Bool = false
-    @State private var showControls: Bool = true
+    @State private var scrollDirection: ScrollDirection = .none
+    @State private var navState: NavState = .solid
+
+    // MARK: - Nav State Machine
+    private enum ScrollDirection {
+        case up, down, none
+    }
+
+    private enum NavState {
+        case solid          // At top — all 3 bars fully solid
+        case transparent    // Scrolling down — background 0, buttons visible
+        case scrollingUp    // Scrolling up OR idle mid-page — all 3 bars at 0.85
+    }
+
+    // ✅ FIX 3 — Single shared opacity value used by ALL 3 bars
+    private var sharedBackgroundOpacity: Double {
+        switch navState {
+        case .solid:        return 1.0
+        case .transparent:  return 0.0
+        case .scrollingUp:  return 0.95
+        }
+    }
+
+    // ✅ FIX 2 — Secondary controls use same opacity, never independently hidden
+    private var secondaryControlsOpacity: Double {
+        switch navState {
+        case .solid:        return 1.0
+        case .transparent:  return 0.0
+        case .scrollingUp:  return 0.95
+        }
+    }
 
     private let columns = [
         GridItem(.flexible(), spacing: 20),
         GridItem(.flexible(), spacing: 20)
     ]
+
+    private enum Layout {
+        static let topSpacerHeight: CGFloat = 140
+        static let bottomSpacerHeight: CGFloat = 100
+        static let atTopThreshold: CGFloat = 4
+    }
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -26,9 +63,7 @@ struct WardrobeScreen: View {
             // MARK: - Scroll Content
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 0) {
-
-                    // Top spacing for overlay
-                    Color.clear.frame(height: 140)
+                    Color.clear.frame(height: Layout.topSpacerHeight)
 
                     if viewModel.activeTab == .items {
                         itemsGrid
@@ -36,20 +71,61 @@ struct WardrobeScreen: View {
                         outfitsGrid
                     }
 
-                    Color.clear.frame(height: 100)
+                    Color.clear.frame(height: Layout.bottomSpacerHeight)
                 }
             }
-            // ✅ FIX 1 — onScrollGeometryChange removed entirely (scrollOffset was unused)
+            .onScrollGeometryChange(for: CGFloat.self) { geo in
+                geo.contentOffset.y
+            } action: { _, newOffset in
+                // Direction detection with 2pt deadzone
+                if newOffset > lastScrollOffset + 2 {
+                    scrollDirection = .down
+                } else if newOffset < lastScrollOffset - 2 {
+                    scrollDirection = .up
+                }
+                lastScrollOffset = newOffset
+                scrollOffset = newOffset
+
+                // ✅ At top — snap everything to solid immediately
+                if newOffset <= Layout.atTopThreshold {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        navState = .solid
+                    }
+                    return
+                }
+
+                // Mid-page direction-based state
+                if isScrolling {
+                    switch scrollDirection {
+                    case .down:
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            navState = .transparent
+                        }
+                    case .up:
+                        // ✅ FIX 2 — All 3 bars come back instantly at 0.85 on scroll up
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            navState = .scrollingUp
+                        }
+                    case .none:
+                        break
+                    }
+                }
+            }
             .onScrollPhaseChange { _, phase in
-                // ✅ FIX 2 — Handle decelerating + animating phases
                 switch phase {
                 case .tracking, .interacting, .decelerating, .animating:
                     isScrolling = true
-                    hideControls()
 
                 case .idle:
                     isScrolling = false
-                    showControlsWithDelay()
+                    // ✅ FIX 2 — On idle mid-page, stay at scrollingUp (0.85), never hide
+                    if scrollOffset > Layout.atTopThreshold {
+                        if navState != .solid {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                navState = .scrollingUp
+                            }
+                        }
+                    }
 
                 default:
                     break
@@ -59,38 +135,35 @@ struct WardrobeScreen: View {
             // MARK: - Floating Controls
             VStack(spacing: 0) {
 
-                // Top Nav
+                // ✅ FIX 1 — No .opacity modifier here. Buttons always visible.
+                // ✅ FIX 3 — backgroundOpacity drives nav background, not a Bool
                 WardrobeTopNavView(
                     mode: .filtersSearchAdd,
                     showsBackButton: false,
-                    isTransparent: !showControls,
+                    backgroundOpacity: sharedBackgroundOpacity,
                     onFiltersTap: onFiltersTap,
                     onSearchTap: onSearchTap,
                     onAddTap: onAddTap
                 )
 
-                // Tabs
-                // ✅ FIX 4 — Reduced offset from -20 to -8 to prevent clipping under nav
+                // ✅ FIX 2 + FIX 3 — Same opacity as top nav, never independently hidden
                 WardrobeTabToggleView(
                     selectedTab: $viewModel.activeTab,
                     itemCount: viewModel.filteredItems.count,
                     outfitCount: viewModel.filteredOutfits.count
                 )
-                .opacity(showControls ? 1 : 0)
-                .offset(y: showControls ? 0 : -8)
-                .animation(.easeInOut(duration: 0.2), value: showControls)
+                .opacity(secondaryControlsOpacity)
+                .animation(.easeInOut(duration: 0.2), value: secondaryControlsOpacity)
 
-                // Category Strip
-                // ✅ FIX 4 — Reduced offset from -20 to -8 to prevent clipping under nav
+                // ✅ FIX 2 + FIX 3 — Same opacity as top nav, never independently hidden
                 WardrobeCategoryFilterStripView(
                     selectedCategory: selectedCategory,
                     tab: viewModel.activeTab
                 ) { category in
                     selectedCategory = category
                 }
-                .opacity(showControls ? 1 : 0)
-                .offset(y: showControls ? 0 : -8)
-                .animation(.easeInOut(duration: 0.2), value: showControls)
+                .opacity(secondaryControlsOpacity)
+                .animation(.easeInOut(duration: 0.2), value: secondaryControlsOpacity)
             }
         }
         .background(ArenColor.Surface.primary)
@@ -100,25 +173,6 @@ struct WardrobeScreen: View {
         .task {
             await viewModel.fetchItems()
             await viewModel.fetchOutfits()
-        }
-    }
-
-    // MARK: - Animations
-
-    private func hideControls() {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            showControls = false
-        }
-    }
-
-    // ✅ FIX 3 — Delay reduced from 0.7s to 0.15s for snappy restore on scroll up
-    private func showControlsWithDelay() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            if !isScrolling {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    showControls = true
-                }
-            }
         }
     }
 
