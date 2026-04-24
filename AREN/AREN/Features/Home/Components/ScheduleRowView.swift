@@ -6,6 +6,7 @@ import UIKit
 enum ScheduleRowState: Hashable {
     case withDate
     case noDate
+    case longTitleSafe
 }
 
 // MARK: - View
@@ -49,11 +50,11 @@ struct ScheduleRowView: View {
     // MARK: - Body
 
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(alignment: .center, spacing: 0) {
             switch state {
             case .noDate:
                 noDateRow
-            case .withDate:
+            case .withDate, .longTitleSafe:
                 withDateRow
             }
         }
@@ -81,18 +82,17 @@ struct ScheduleRowView: View {
             color: ArenColor.Text.primary,
             trailingPadding: 2,
             horizontalPadding: 4,
-            expands: true
+            expands: state == .longTitleSafe
         )
 
         label(timeText, color: ArenColor.Text.primary, horizontalPadding: 4)
 
         if let count = overflowCount, count > 0 {
-            Spacer(minLength: 8)
             divider
-                .padding(.horizontal, 8)
+                .padding(.leading, 6)
             overflowButton(count)
         } else if showsCTA {
-            Spacer(minLength: 8)
+            Spacer(minLength: 0)
             ctaButton
         }
     }
@@ -115,13 +115,12 @@ struct ScheduleRowView: View {
         Text(text)
             .font(Self.scheduleFont)
             .foregroundStyle(color)
-            .lineSpacing(4)
             .textCase(.uppercase)
             .lineLimit(1)
             .truncationMode(.tail)
             .padding(.horizontal, horizontalPadding)
             .padding(.trailing, trailingPadding)
-            .frame(maxWidth: expands ? .infinity : nil, alignment: .leading)
+            .frame(maxWidth: expands ? .infinity : nil, minHeight: 16, alignment: .leading)
     }
 
     private func overflowButton(_ count: Int) -> some View {
@@ -131,6 +130,7 @@ struct ScheduleRowView: View {
                 .foregroundStyle(ArenColor.Text.secondary)
                 .textCase(.uppercase)
                 .lineLimit(1)
+                .padding(.leading, 6)
         }
         .buttonStyle(.plain)
     }
@@ -138,9 +138,8 @@ struct ScheduleRowView: View {
     private var ctaButton: some View {
         Button(action: { onCTATap?() }) {
             Text(ctaTitle)
-                .font(Self.ctaFont)
+                .font(Self.scheduleFont)
                 .foregroundStyle(ArenColor.Text.inverse)
-                .lineSpacing(4)
                 .textCase(.uppercase)
                 .lineLimit(1)
                 .padding(.horizontal, 12)
@@ -164,7 +163,6 @@ struct ScheduleRowView: View {
     }
 
     private static let scheduleFont: Font = helveticaNow(size: 13)
-    private static let ctaFont: Font = helveticaNow(size: 12)
 }
 
 // MARK: - Previews
@@ -188,6 +186,7 @@ struct ScheduleRowView: View {
 
 #Preview("Long Title") {
     ScheduleRowView(
+        state: .longTitleSafe,
         titleText: "QUARTERLY STRATEGY WORKSHOP WITH CLIENT TEAM",
         timeText: "10:30 AM"
     )

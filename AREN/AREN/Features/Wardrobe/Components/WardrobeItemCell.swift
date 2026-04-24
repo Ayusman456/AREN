@@ -1,35 +1,59 @@
 import SwiftUI
 import Kingfisher
+import UIKit
 
 struct WardrobeItemCell: View {
     let item: WardrobeItem
 
+    private enum Layout {
+        static let cardWidth: CGFloat = 171
+        static let imageHeight: CGFloat = 257
+        static let imagePadding: CGFloat = 24
+        static let metadataHorizontalPadding: CGFloat = 8
+        static let metadataTopPadding: CGFloat = 6
+        static let metadataBottomPadding: CGFloat = 12
+        static let metadataLineSpacing: CGFloat = 4
+        static let textLineHeight: CGFloat = 16
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 0) {
             imageBlock
             metaBlock
         }
-        .frame(width: 171)
-       // .border(Color.red, width: 1) // DEBUG
+        .frame(width: Layout.cardWidth, alignment: .topLeading)
+        .background(ArenColor.Surface.primary)
     }
 
     // MARK: - Image
 
     @ViewBuilder
     private var imageBlock: some View {
-        if item.isProcessing {
+        if let source = item.garmentSource {
+            garmentImage(for: source)
+        } else if item.isProcessing {
             processingPlaceholder
-        } else if let urlString = item.imageURL, let url = URL(string: urlString) {
+        } else {
+            emptyImagePlaceholder
+        }
+    }
+
+    @ViewBuilder
+    private func garmentImage(for source: GarmentSource) -> some View {
+        switch source {
+        case .remote(let url):
             KFImage(url)
                 .placeholder { loadingPlaceholder }
                 .resizable()
                 .scaledToFit()
-                .padding(24)
-                .frame(width: 171, height: 228)
-                .background(Color(hex: "#F5F5F5"))
-         //       .border(Color.blue, width: 1) // DEBUG
-        } else {
-            emptyImagePlaceholder
+                .padding(Layout.imagePadding)
+                .frame(width: Layout.cardWidth, height: Layout.imageHeight)
+        case .asset(let assetName):
+            Image(assetName)
+                .resizable()
+                .scaledToFit()
+                .padding(Layout.imagePadding)
+                .frame(width: Layout.cardWidth, height: Layout.imageHeight)
         }
     }
 
@@ -37,45 +61,62 @@ struct WardrobeItemCell: View {
 
     private var processingPlaceholder: some View {
         ZStack {
-            Color(hex: "#F5F5F3")
+            ArenColor.Surface.secondary
             VStack(spacing: 8) {
                 ProgressView()
-                    .tint(Color(hex: "#999999"))
+                    .tint(ArenColor.Text.tertiary)
                 Text("PROCESSING")
-                    .font(.system(size: 9, weight: .regular))
+                    .font(Self.metadataFont)
                     .tracking(1.5)
-                    .foregroundColor(Color(hex: "#999999"))
+                    .foregroundStyle(ArenColor.Text.tertiary)
             }
         }
-        .frame(width: 171, height: 228)
+        .frame(width: Layout.cardWidth, height: Layout.imageHeight)
     }
 
     private var loadingPlaceholder: some View {
-        Color(hex: "#F5F5F3")
-            .frame(width: 171, height: 228)
+        ArenColor.Surface.secondary
+            .frame(width: Layout.cardWidth, height: Layout.imageHeight)
     }
 
     private var emptyImagePlaceholder: some View {
-        Color(hex: "#EBEBEB")
-            .frame(width: 171, height: 228)
+        ArenColor.Surface.tertiary
+            .frame(width: Layout.cardWidth, height: Layout.imageHeight)
     }
 
     // MARK: - Meta
 
     private var metaBlock: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Layout.metadataLineSpacing) {
             Text(item.name.uppercased())
-                .font(.system(size: 10, weight: .regular))
-                .tracking(0.5)
+                .font(Self.metadataFont)
                 .lineLimit(1)
-                .foregroundColor(.black)
+                .foregroundStyle(ArenColor.Text.primary)
+                .frame(height: Layout.textLineHeight, alignment: .leading)
 
             Text((item.category ?? "").uppercased())
-                .font(.system(size: 9, weight: .regular))
-                .tracking(0.5)
-                .foregroundColor(Color(hex: "#999999"))
+                .font(Self.metadataFont)
+                .lineLimit(1)
+                .foregroundStyle(ArenColor.Text.primary)
+                .frame(height: Layout.textLineHeight, alignment: .leading)
         }
-        .padding(.horizontal, 8)
-        .padding(.bottom, 12)
+        .padding(.horizontal, Layout.metadataHorizontalPadding)
+        .padding(.top, Layout.metadataTopPadding)
+        .padding(.bottom, Layout.metadataBottomPadding)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private static var metadataFont: Font {
+        let candidates = [
+            "HelveticaNowText-Light",
+            "HelveticaNowText Light",
+            "HelveticaNowText-Regular",
+        ]
+
+        for name in candidates where UIFont(name: name, size: 11) != nil {
+            return .custom(name, size: 11)
+        }
+
+        return .system(size: 11, weight: .light)
     }
 }

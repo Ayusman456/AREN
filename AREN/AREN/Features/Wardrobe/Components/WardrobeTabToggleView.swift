@@ -13,8 +13,6 @@ enum WardrobeTab {
 }
 
 struct WardrobeTabToggleView: View {
-    private let showDebugBorders = false
-
     @Binding var selectedTab: WardrobeTab
     let itemCount: Int
     let outfitCount: Int
@@ -43,7 +41,6 @@ struct WardrobeTabToggleView: View {
         .padding(.vertical, Layout.contentInset)
         .frame(maxWidth: .infinity, minHeight: 64)
         .background(ArenColor.Surface.primary)
-        .debugBorder(if: showDebugBorders, color: .red)
     }
 
     // MARK: - Tab

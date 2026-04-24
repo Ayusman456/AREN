@@ -32,7 +32,7 @@ struct WardrobeScreen: View {
     private var sharedBackgroundOpacity: Double {
         switch navState {
         case .solid:        return 1.0
-        case .transparent:  return 0.0
+        case .transparent:  return 0.0  // never fully 0 — safe area stays in sync visually
         case .scrollingUp:  return 0.95
         }
     }
@@ -41,132 +41,140 @@ struct WardrobeScreen: View {
     private var secondaryControlsOpacity: Double {
         switch navState {
         case .solid:        return 1.0
-        case .transparent:  return 0.0
+        case .transparent:  return 0.0  // never fully 0 — safe area stays in sync visually
         case .scrollingUp:  return 0.95
         }
     }
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 20),
-        GridItem(.flexible(), spacing: 20)
-    ]
-
     private enum Layout {
-        static let topSpacerHeight: CGFloat = 140
+        static let itemsTopSpacerHeight: CGFloat = 152
         static let bottomSpacerHeight: CGFloat = 100
         static let atTopThreshold: CGFloat = 4
+        static let gridHorizontalInset: CGFloat = 20
+        static let itemsColumnSpacing: CGFloat = 20
+        static let itemsRowSpacing: CGFloat = 32
+        static let itemCardWidth: CGFloat = 171
+        static let outfitsColumnSpacing: CGFloat = 20
+        static let outfitsRowSpacing: CGFloat = 32
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
+        GeometryReader { proxy in
+            ZStack(alignment: .top) {
 
-            // MARK: - Scroll Content
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(spacing: 0) {
-                    Color.clear.frame(height: Layout.topSpacerHeight)
+                // MARK: - Scroll Content
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        Color.clear.frame(height: Layout.itemsTopSpacerHeight)
 
-                    if viewModel.activeTab == .items {
-                        itemsGrid
-                    } else {
-                        outfitsGrid
+                        if viewModel.activeTab == .items {
+                            itemsGrid
+                        } else {
+                            outfitsGrid
+                        }
+
+                        Color.clear.frame(height: Layout.bottomSpacerHeight)
                     }
-
-                    Color.clear.frame(height: Layout.bottomSpacerHeight)
                 }
-            }
-            .onScrollGeometryChange(for: CGFloat.self) { geo in
-                geo.contentOffset.y
-            } action: { _, newOffset in
-                // Direction detection with 2pt deadzone
-                if newOffset > lastScrollOffset + 2 {
-                    scrollDirection = .down
-                } else if newOffset < lastScrollOffset - 2 {
-                    scrollDirection = .up
-                }
-                lastScrollOffset = newOffset
-                scrollOffset = newOffset
-
-                // ✅ At top — snap everything to solid immediately
-                if newOffset <= Layout.atTopThreshold {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        navState = .solid
+                .onScrollGeometryChange(for: CGFloat.self) { geo in
+                    geo.contentOffset.y
+                } action: { _, newOffset in
+                    // Direction detection with 2pt deadzone
+                    if newOffset > lastScrollOffset + 2 {
+                        scrollDirection = .down
+                    } else if newOffset < lastScrollOffset - 2 {
+                        scrollDirection = .up
                     }
-                    return
-                }
+                    lastScrollOffset = newOffset
+                    scrollOffset = newOffset
 
-                // Mid-page direction-based state
-                if isScrolling {
-                    switch scrollDirection {
-                    case .down:
+                    // ✅ At top — snap everything to solid immediately
+                    if newOffset <= Layout.atTopThreshold {
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            navState = .transparent
+                            navState = .solid
                         }
-                    case .up:
-                        // ✅ FIX 2 — All 3 bars come back instantly at 0.85 on scroll up
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            navState = .scrollingUp
+                        return
+                    }
+
+                    // Mid-page direction-based state
+                    if isScrolling {
+                        switch scrollDirection {
+                        case .down:
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                navState = .transparent
+                            }
+                        case .up:
+                            // ✅ FIX 2 — All 3 bars come back instantly at 0.85 on scroll up
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                navState = .scrollingUp
+                            }
+                        case .none:
+                            break
                         }
-                    case .none:
+                    }
+                }
+                .onScrollPhaseChange { _, phase in
+                    switch phase {
+                    case .tracking, .interacting, .decelerating, .animating:
+                        isScrolling = true
+
+                    case .idle:
+                        isScrolling = false
+                        if scrollOffset > Layout.atTopThreshold {
+                            if navState != .solid {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                                    if !isScrolling {
+                                        withAnimation(.easeInOut(duration: 0.6)) {
+                                            navState = .scrollingUp
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                    default:
                         break
                     }
                 }
-            }
-            .onScrollPhaseChange { _, phase in
-                switch phase {
-                case .tracking, .interacting, .decelerating, .animating:
-                    isScrolling = true
 
-                case .idle:
-                    isScrolling = false
-                    // ✅ FIX 2 — On idle mid-page, stay at scrollingUp (0.85), never hide
-                    if scrollOffset > Layout.atTopThreshold {
-                        if navState != .solid {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                navState = .scrollingUp
-                            }
-                        }
+                topSafeAreaBackground(height: proxy.safeAreaInsets.top)
+
+                // MARK: - Floating Controls
+                VStack(spacing: 0) {
+
+                    // ✅ FIX 1 — No .opacity modifier here. Buttons always visible.
+                    // ✅ FIX 3 — backgroundOpacity drives nav background, not a Bool
+                    WardrobeTopNavView(
+                        mode: .filtersSearchAdd,
+                        showsBackButton: false,
+                        backgroundOpacity: sharedBackgroundOpacity,
+                        onFiltersTap: onFiltersTap,
+                        onSearchTap: onSearchTap,
+                        onAddTap: onAddTap
+                    )
+
+                    // ✅ FIX 2 + FIX 3 — Same opacity as top nav, never independently hidden
+                    WardrobeTabToggleView(
+                        selectedTab: $viewModel.activeTab,
+                        itemCount: viewModel.filteredItems.count,
+                        outfitCount: viewModel.filteredOutfits.count
+                    )
+                    .opacity(secondaryControlsOpacity)
+                    .animation(.easeInOut(duration: 0.2), value: secondaryControlsOpacity)
+
+                    // ✅ FIX 2 + FIX 3 — Same opacity as top nav, never independently hidden
+                    WardrobeCategoryFilterStripView(
+                        selectedCategory: selectedCategory,
+                        tab: viewModel.activeTab
+                    ) { category in
+                        selectedCategory = category
                     }
-
-                default:
-                    break
+                    .opacity(secondaryControlsOpacity)
+                    .animation(.easeInOut(duration: 0.2), value: secondaryControlsOpacity)
                 }
-            }
-
-            // MARK: - Floating Controls
-            VStack(spacing: 0) {
-
-                // ✅ FIX 1 — No .opacity modifier here. Buttons always visible.
-                // ✅ FIX 3 — backgroundOpacity drives nav background, not a Bool
-                WardrobeTopNavView(
-                    mode: .filtersSearchAdd,
-                    showsBackButton: false,
-                    backgroundOpacity: sharedBackgroundOpacity,
-                    onFiltersTap: onFiltersTap,
-                    onSearchTap: onSearchTap,
-                    onAddTap: onAddTap
-                )
-
-                // ✅ FIX 2 + FIX 3 — Same opacity as top nav, never independently hidden
-                WardrobeTabToggleView(
-                    selectedTab: $viewModel.activeTab,
-                    itemCount: viewModel.filteredItems.count,
-                    outfitCount: viewModel.filteredOutfits.count
-                )
-                .opacity(secondaryControlsOpacity)
-                .animation(.easeInOut(duration: 0.2), value: secondaryControlsOpacity)
-
-                // ✅ FIX 2 + FIX 3 — Same opacity as top nav, never independently hidden
-                WardrobeCategoryFilterStripView(
-                    selectedCategory: selectedCategory,
-                    tab: viewModel.activeTab
-                ) { category in
-                    selectedCategory = category
-                }
-                .opacity(secondaryControlsOpacity)
-                .animation(.easeInOut(duration: 0.2), value: secondaryControlsOpacity)
             }
         }
-        .background(ArenColor.Surface.primary)
+        .background(ArenColor.Surface.primary.ignoresSafeArea())
         .onChange(of: viewModel.activeTab) {
             selectedCategory = "All"
         }
@@ -176,24 +184,47 @@ struct WardrobeScreen: View {
         }
     }
 
+    private func topSafeAreaBackground(height: CGFloat) -> some View {
+        ArenColor.Surface.primary
+            .opacity(sharedBackgroundOpacity)
+            .frame(maxWidth: .infinity)
+            .frame(height: height, alignment: .top)
+            .ignoresSafeArea(edges: .top)
+            .animation(.easeInOut(duration: 0.2), value: sharedBackgroundOpacity)
+    }
+
     // MARK: - Grids
 
     private var itemsGrid: some View {
-        LazyVGrid(columns: columns, spacing: 32) {
+        LazyVGrid(columns: itemColumns, spacing: Layout.itemsRowSpacing) {
             ForEach(categoryFilteredItems) { item in
                 WardrobeItemCell(item: item)
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Layout.gridHorizontalInset)
     }
 
     private var outfitsGrid: some View {
-        LazyVGrid(columns: columns, spacing: 32) {
+        LazyVGrid(columns: outfitColumns, spacing: Layout.outfitsRowSpacing) {
             ForEach(viewModel.filteredOutfits) { outfit in
                 WardrobeOutfitCell(outfit: outfit, onTap: {})
             }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, Layout.gridHorizontalInset)
+    }
+
+    private var itemColumns: [GridItem] {
+        [
+            GridItem(.fixed(Layout.itemCardWidth), spacing: Layout.itemsColumnSpacing),
+            GridItem(.fixed(Layout.itemCardWidth), spacing: 0),
+        ]
+    }
+
+    private var outfitColumns: [GridItem] {
+        [
+            GridItem(.flexible(), spacing: Layout.outfitsColumnSpacing),
+            GridItem(.flexible(), spacing: 0),
+        ]
     }
 
     // MARK: - Filtering

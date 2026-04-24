@@ -27,16 +27,37 @@ struct HomeView: View {
                 }
             )
 
-            if homeViewModel.isLoading {
+            // Keep both states in the tree; only opacity changes.
+            // This prevents any layout recalculation / geometry shift
+            // when isLoading flips.
+            ZStack {
                 loadingSkeleton
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            } else {
+                    .opacity(homeViewModel.isLoading ? 1 : 0)
+                    .allowsHitTesting(homeViewModel.isLoading)
+                    .debugBorder(.blue, width: 2)
+
                 outfitCanvas
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+                    .opacity(homeViewModel.isLoading ? 0 : 1)
+                    .allowsHitTesting(!homeViewModel.isLoading)
+                    .debugBorder(.green, width: 2)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .debugBorder(.purple, width: 2)
+
+            // CTA placeholder preserves bottom space during load so the
+            // middle ZStack frame never changes size.
+            ZStack {
+                ctaPlaceholder
+                    .opacity(homeViewModel.isLoading ? 1 : 0)
+                    .debugBorder(.orange, width: 2)
+
                 confirmOutfitCTA
+                    .opacity(homeViewModel.isLoading ? 0 : 1)
+                    .debugBorder(.pink, width: 2)
             }
         }
         .background(ArenColor.Surface.primary)
+        .debugBorder(.cyan, width: 2)
         .task {
             homeViewModel.loadOutfitIfNeeded()
         }
@@ -77,8 +98,20 @@ struct HomeView: View {
             }
         )
         .modifier(ShakeModifier(trigger: homeViewModel.confirmCTAState == .error))
+        .padding(.horizontal, 20)
         .padding(.top, 12)
         .padding(.bottom, 24)
+    }
+
+    /// Invisible placeholder that occupies the exact same space as
+    /// `confirmOutfitCTA` so the VStack layout never changes size
+    /// when `isLoading` flips.
+    private var ctaPlaceholder: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, minHeight: 32)
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 24)
     }
     
     //shake modifier
@@ -189,7 +222,7 @@ private struct ConfirmOutfitCTAView: View {
                     ctaLabel("ALREADY LOGGED")
                 }
             }
-            .frame(width: 362, height: 32)
+            .frame(maxWidth: .infinity, minHeight: 32)
             .background(ArenColor.Surface.primary)
             .overlay {
                 Rectangle()
@@ -200,6 +233,7 @@ private struct ConfirmOutfitCTAView: View {
         .buttonStyle(.plain)
         .disabled(state == .loading || state == .confirmed || state == .duplicate)
         .accessibilityLabel(accessibilityLabel)
+        .debugBorder(.brown, width: 2)
     }
 
     @ViewBuilder

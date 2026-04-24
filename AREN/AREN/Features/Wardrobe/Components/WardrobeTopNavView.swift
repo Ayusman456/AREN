@@ -47,7 +47,7 @@ struct WardrobeTopNavView: View {
     }
 
     private var filtersSearchAddLayout: some View {
-        HStack {
+        HStack(spacing: 0) {
             backContainer
             Spacer()
             trailingActions
@@ -75,7 +75,7 @@ struct WardrobeTopNavView: View {
     }
 
     private var backContainer: some View {
-        HStack {
+        HStack(spacing: 0) {
             if showsBackButton {
                 Button(action: onBackTap) {
                     Image("ArrowLeft")
@@ -90,6 +90,7 @@ struct WardrobeTopNavView: View {
             }
         }
         .padding(.leading, 8)
+        .frame(width: 60, alignment: .leading)
     }
 
     private var cancelContainer: some View {
@@ -104,14 +105,22 @@ struct WardrobeTopNavView: View {
 
     private var trailingActions: some View {
         HStack(spacing: 4) {
-            Button("FILTERS", action: onFiltersTap)
-                .font(.system(size: 12, weight: .light))
-                .foregroundStyle(ArenColor.Text.primary)
+            Button(action: onFiltersTap) {
+                Text("FILTERS")
+                    .font(Self.labelFont)
+                    .foregroundStyle(ArenColor.Text.primary)
+                    .frame(height: 16)
+                    .padding(.leading, 8)
+                    .padding(.trailing, 12)
+                    .padding(.vertical, 16)
+            }
+            .buttonStyle(.plain)
 
             iconButton("MagnifyingGlass", action: onSearchTap)
             iconButton("Plus", action: onAddTap)
         }
         .padding(.trailing, 12)
+        .frame(width: 168, alignment: .trailing)
     }
 
     private func iconButton(_ name: String, action: @escaping () -> Void) -> some View {
@@ -123,5 +132,20 @@ struct WardrobeTopNavView: View {
                 .foregroundStyle(ArenColor.Icon.primary)
                 .frame(width: 40, height: 40)
         }
+        .buttonStyle(.plain)
+    }
+
+    private static var labelFont: Font {
+        let candidates = [
+            "HelveticaNowText-Light",
+            "HelveticaNowText Light",
+            "HelveticaNowText-Regular",
+        ]
+
+        for name in candidates where UIFont(name: name, size: 12) != nil {
+            return .custom(name, size: 12)
+        }
+
+        return .system(size: 12, weight: .light)
     }
 }
